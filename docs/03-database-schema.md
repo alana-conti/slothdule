@@ -12,7 +12,8 @@ Princípios:
 - usar Row Level Security no Supabase;
 - evitar dados sem dono;
 - manter estrutura simples no MVP;
-- deixar espaço para expansão futura.
+- deixar espaço para expansão futura;
+- registrar Folhinhas por transações, para manter histórico e evitar saldo sem explicação.
 
 ## 2. Tipos enumerados sugeridos
 
@@ -55,6 +56,21 @@ Princípios:
 - `short`
 - `medium`
 - `long`
+
+### leaf_transaction_type
+
+- `task_completion`
+- `early_completion_bonus`
+- `checklist_bonus`
+- `weekly_bonus`
+- `reward_redemption`
+- `manual_adjustment`
+
+### reward_redemption_status
+
+- `requested`
+- `delivered`
+- `cancelled`
 
 ## 3. Tabela: profiles
 
@@ -143,9 +159,12 @@ Tabela principal.
 | due_time | time | horário opcional |
 | estimated_minutes | integer | estimativa de esforço |
 | completed_at | timestamptz | preenchido ao concluir |
+| leaf_awarded_at | timestamptz | preenchido quando Folhinhas da conclusão forem geradas |
 | sort_score | integer | score calculado opcional |
 | created_at | timestamptz | automático |
 | updated_at | timestamptz | automático |
+
+`leaf_awarded_at` ajuda a evitar que a mesma conclusão gere Folhinhas repetidas quando uma tarefa é reaberta e concluída novamente.
 
 ## 8. Tabela: subtasks
 
@@ -173,9 +192,9 @@ Lembretes vinculados a tarefas ou independentes.
 | task_id | uuid | opcional |
 | title | text | título do lembrete |
 | remind_at | timestamptz | data/hora do lembrete |
-| channel | reminder_channel | push/app/etc. |
+| channel | reminder_channel | push/app/telegram/whatsapp |
 | horizon | reminder_horizon | curto/médio/longo |
-| is_sent | boolean | controle de envio |
+| is_sent | boolean | enviado ou não |
 | created_at | timestamptz | automático |
 | updated_at | timestamptz | automático |
 
@@ -195,34 +214,34 @@ Links, áudios e arquivos vinculados a tarefas.
 | size_bytes | bigint | opcional |
 | created_at | timestamptz | automático |
 
-## 11. Tabela futura: reward_items
+## 11. Tabela: reward_items
 
-Recompensas configuráveis para a gamificação.
+Recompensas configuráveis para a gamificação do MVP.
 
 | Campo | Tipo | Observação |
 |---|---|---|
 | id | uuid | chave primária |
-| user_id | uuid | dono |
+| user_id | uuid | dono; null para recompensas padrão globais |
 | title | text | Noite de filme |
 | description | text | descrição |
 | cost | integer | custo em Folhinhas |
+| icon | text | emoji/ícone opcional |
+| is_default | boolean | recompensa padrão |
 | is_active | boolean | disponível ou não |
 | created_at | timestamptz | automático |
+| updated_at | timestamptz | automático |
 
-## 12. Tabela futura: coin_transactions
+Recompensas padrão sugeridas:
 
-Histórico de ganhos e gastos de Folhinhas.
+- Beijo — 5 Folhinhas.
+- Café especial — 10 Folhinhas.
+- Noite de filme — 25 Folhinhas.
+- Jantar escolhido por ele — 50 Folhinhas.
+- Presente surpresa — 80 Folhinhas.
+- Final de semana especial — 150 Folhinhas.
+- Viagem — 300 Folhinhas.
 
-| Campo | Tipo | Observação |
-|---|---|---|
-| id | uuid | chave primária |
-| user_id | uuid | dono |
-| task_id | uuid | opcional |
-| amount | integer | positivo ou negativo |
-| reason | text | motivo |
-| created_at | timestamptz | automático |
-
-## 13. Tabela futura: reward_redemptions
+## 12. Tabela: reward_redemptions
 
 Resgates de recompensas.
 
@@ -231,11 +250,47 @@ Resgates de recompensas.
 | id | uuid | chave primária |
 | user_id | uuid | dono |
 | reward_item_id | uuid | recompensa |
-| cost | integer | custo aplicado |
-| status | text | requested, delivered, canceled |
+| cost | integer | custo aplicado no momento do resgate |
+| status | reward_redemption_status | requested/delivered/cancelled |
+| notes | text | observações opcionais |
 | redeemed_at | timestamptz | data do resgate |
+| delivered_at | timestamptz | data de entrega, se houver |
+| cancelled_at | timestamptz | data de cancelamento, se houver |
+| created_at | timestamptz | automático |
+| updated_at | timestamptz | automático |
 
-## 14. Regras de segurança
+## 13. Tabela: leaf_transactions
+
+Histórico de ganhos e gastos de Folhinhas.
+
+| Campo | Tipo | Observação |
+|---|---|---|
+| id | uuid | chave primária |
+| user_id | uuid | dono |
+| task_id | uuid | opcional, para ganhos por tarefa |
+| reward_redemption_id | uuid | opcional, para gastos por resgate |
+| type | leaf_transaction_type | tipo da transação |
+| amount | integer | positivo para ganho, negativo para gasto |
+| reason | text | motivo legível |
+| created_at | timestamptz | automático |
+
+### Regras de transação
+
+- Ganhos devem usar valores positivos.
+- Resgates devem usar valores negativos.
+- Uma tarefa concluída não deve gerar o mesmo ganho de conclusão mais de uma vez.
+- O saldo pode ser calculado pela soma de `amount` em `leaf_transactions`.
+
+## 14. View: leaf_balances
+
+View opcional para facilitar exibição de saldo.
+
+| Campo | Tipo | Observação |
+|---|---|---|
+| user_id | uuid | usuário |
+| balance | integer | soma das transações |
+
+## 15. Regras de segurança
 
 Todas as tabelas com `user_id` devem ter Row Level Security.
 
@@ -245,9 +300,9 @@ Regra geral:
 user_id = auth.uid()
 ```
 
-Categorias globais podem ter `user_id is null`, mas categorias criadas por usuários devem obedecer ao dono.
+Categorias e recompensas globais podem ter `user_id is null`, mas itens criados por usuários devem obedecer ao dono.
 
-## 15. Índices recomendados
+## 16. Índices recomendados
 
 - `tasks(user_id)`
 - `tasks(user_id, due_date)`
@@ -258,4 +313,8 @@ Categorias globais podem ter `user_id is null`, mas categorias criadas por usuá
 - `tasks(user_id, project_id)`
 - `reminders(user_id, remind_at)`
 - `attachments(user_id, task_id)`
-
+- `subtasks(task_id, position)`
+- `reward_items(user_id, is_active)`
+- `reward_redemptions(user_id, status)`
+- `leaf_transactions(user_id, created_at)`
+- `leaf_transactions(user_id, task_id, type)`

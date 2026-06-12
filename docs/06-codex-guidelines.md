@@ -59,6 +59,7 @@ Observações:
 - Adicionar IA paga.
 - Adicionar WhatsApp antes da fase planejada.
 - Criar lógica de gamificação punitiva.
+- Remover Folhinhas do MVP sem autorização.
 - Enviar chaves para o GitHub.
 - Desabilitar Row Level Security.
 

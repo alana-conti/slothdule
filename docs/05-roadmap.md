@@ -4,6 +4,8 @@
 
 O roadmap do Slothdule está organizado em fases. Cada fase deve entregar valor real antes de avançar para a próxima.
 
+A partir da decisão de produto, a gamificação com **Folhinhas** faz parte do MVP. Ela deve ser implementada de forma simples, positiva e sem punições.
+
 ## Fase 0 — Fundação
 
 ### Objetivo
@@ -25,11 +27,11 @@ Criar a base do projeto, documentação, repositório e ambiente técnico.
 
 O projeto roda localmente e possui documentação suficiente para orientar o Codex.
 
-## Fase 1 — Núcleo de tarefas
+## Fase 1 — Núcleo de tarefas + Folhinhas
 
 ### Objetivo
 
-Permitir que o usuário registre, edite e visualize tarefas reais.
+Permitir que o usuário registre tarefas reais e já receba Folhinhas ao concluir atividades.
 
 ### Entregas
 
@@ -45,16 +47,20 @@ Permitir que o usuário registre, edite e visualize tarefas reais.
 - Data de início.
 - Prazo.
 - Estimativa de tempo.
+- Tabelas de recompensas.
+- Tabela de transações de Folhinhas.
+- View ou função de saldo de Folhinhas.
+- Recompensas padrão iniciais.
 
 ### Critério de conclusão
 
-O usuário consegue criar uma tarefa completa, vinculá-la a categoria/cliente/projeto e acompanhar checklist.
+O usuário consegue criar uma tarefa completa, vinculá-la a categoria/cliente/projeto, acompanhar checklist e visualizar estrutura inicial de Folhinhas.
 
-## Fase 2 — Tela Hoje
+## Fase 2 — Tela Hoje + ganho de Folhinhas
 
 ### Objetivo
 
-Resolver o problema de acúmulo e esquecimento no uso diário.
+Resolver o problema de acúmulo/esquecimento e tornar a conclusão de tarefas mais recompensadora.
 
 ### Entregas
 
@@ -66,12 +72,37 @@ Resolver o problema de acúmulo e esquecimento no uso diário.
 - Tarefas críticas em destaque.
 - Botão de nova tarefa.
 - Botão de captura rápida.
+- Saldo discreto de Folhinhas na tela Hoje.
+- Cálculo de Folhinhas ao concluir tarefa.
+- Histórico de transações.
+- Mensagem gentil do mascote ao ganhar Folhinhas.
 
 ### Critério de conclusão
 
-Ao abrir o app, o usuário sabe o que precisa fazer agora.
+Ao abrir o app, o usuário sabe o que precisa fazer agora; ao concluir tarefas, ganha Folhinhas com explicação simples.
 
-## Fase 3 — Temporalidade: calendário e timeline
+## Fase 3 — Loja de recompensas afetivas
+
+### Objetivo
+
+Permitir que o usuário resgate recompensas usando Folhinhas.
+
+### Entregas
+
+- Tela de recompensas.
+- Lista de recompensas ativas.
+- Recompensas padrão: beijo, café especial, noite de filme, jantar, presente surpresa, final de semana e viagem.
+- Validação de saldo suficiente.
+- Resgate de recompensa.
+- Transação negativa no histórico.
+- Status do resgate: solicitado, entregue ou cancelado.
+- Possibilidade de ativar/desativar recompensas.
+
+### Critério de conclusão
+
+O usuário consegue ver o saldo, escolher uma recompensa, confirmar o resgate e acompanhar o status.
+
+## Fase 4 — Temporalidade: calendário e timeline
 
 ### Objetivo
 
@@ -93,7 +124,7 @@ Dar sensação clara de tempo, duração e prazo.
 
 O usuário consegue ver tarefas distribuídas no tempo e identificar sobrecarga.
 
-## Fase 4 — Carga diária e priorização
+## Fase 5 — Carga diária e priorização
 
 ### Objetivo
 
@@ -111,7 +142,7 @@ Ajudar a priorizar corretamente sem usar IA paga.
 
 O app sugere a ordem do dia com explicações transparentes.
 
-## Fase 5 — Lembretes e notificações
+## Fase 6 — Lembretes e notificações
 
 ### Objetivo
 
@@ -130,7 +161,7 @@ Reduzir esquecimento.
 
 O usuário recebe alerta no horário definido.
 
-## Fase 6 — Anexos, links e áudio
+## Fase 7 — Anexos, links e áudio
 
 ### Objetivo
 
@@ -148,7 +179,7 @@ Preservar contexto das tarefas.
 
 O usuário consegue salvar e reproduzir áudio dentro de uma tarefa.
 
-## Fase 7 — Captura rápida
+## Fase 8 — Captura rápida
 
 ### Objetivo
 
@@ -168,26 +199,6 @@ Facilitar registro de demandas conforme surgem.
 
 O usuário escreve uma frase e o app sugere uma tarefa estruturada.
 
-## Fase 8 — Gamificação afetiva
-
-### Objetivo
-
-Adicionar motivação leve e personalizada.
-
-### Entregas
-
-- Moeda interna: Folhinhas.
-- Saldo de Folhinhas.
-- Regras de ganho.
-- Loja de recompensas.
-- Resgate de recompensas.
-- Histórico de transações.
-- Mascote reagindo a conquistas.
-
-### Critério de conclusão
-
-O usuário ganha Folhinhas por tarefas concluídas e resgata recompensas configuráveis.
-
 ## Fase 9 — Integrações
 
 ### Objetivo
@@ -206,4 +217,3 @@ Tornar o Slothdule mais fluido no ecossistema real do usuário.
 ### Critério de conclusão
 
 Pelo menos uma integração externa funciona sem comprometer privacidade ou simplicidade.
-

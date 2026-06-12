@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sloth-cream: #f8f3ea;
+  --color-sloth-beige: #efe3d0;
+  --color-sloth-ink: #2f241d;
+  --color-sloth-muted: #6f665c;
+  --color-sloth-card: #fffdf8;
+  --color-sloth-border: #ded2c1;
+  --color-sloth-moss: #5f7a61;
+  --color-sloth-forest: #3f5a42;
+  --color-sloth-gold: #c49a4a;
+  --color-sloth-leaf: #6f9b6d;
+  --color-sloth-amber: #d69e45;
+  --color-sloth-terracotta: #c46a4a;
+
+  --font-sans:
+    "Avenir Next", Avenir, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --radius-card: 2rem;
+  --shadow-soft: 0 24px 70px rgb(47 36 29 / 9%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-sloth-cream);
+}
+
+body {
+  margin: 0;
+  background: var(--color-sloth-cream);
+  color: var(--color-sloth-ink);
+  font-family: var(--font-sans);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: var(--color-sloth-beige);
+  color: var(--color-sloth-forest);
+}

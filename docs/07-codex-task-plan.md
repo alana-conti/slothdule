@@ -55,11 +55,12 @@ Criar schema inicial do banco.
 ### Prompt sugerido
 
 ```text
-Leia docs/03-database-schema.md. Crie migrations SQL para as tabelas iniciais do Slothdule: profiles, categories, clients, projects, tasks, subtasks, reminders e attachments. Inclua enums, chaves estrangeiras, índices e timestamps. Prepare Row Level Security, mas não implemente lógica de frontend nesta tarefa.
+Leia docs/03-database-schema.md. Crie migrations SQL para as tabelas iniciais do Slothdule: profiles, categories, clients, projects, tasks, subtasks, reminders, attachments, reward_items, reward_redemptions e leaf_transactions. Inclua enums, chaves estrangeiras, índices e timestamps. Prepare Row Level Security, mas não implemente lógica de frontend nesta tarefa.
 
 Critérios de aceite:
 - Migration SQL criada em supabase/migrations.
 - Tabelas principais existem.
+- Tabelas de Folhinhas e recompensas existem.
 - Enums existem.
 - Índices principais existem.
 - RLS está habilitada.
@@ -190,6 +191,62 @@ Critérios de aceite:
 - Justificativas são legíveis.
 ```
 
+## Task 4.3 — Implementar cálculo de Folhinhas
+
+### Objetivo
+
+Gerar Folhinhas ao concluir tarefas.
+
+### Prompt sugerido
+
+```text
+Leia docs/01-product-requirements.md e docs/10-gamification.md. Implemente uma função pura em src/lib/rewards para calcular Folhinhas ao concluir tarefa. Considere prioridade, conclusão antes do prazo e checklist completo. Não implemente punições por atraso.
+
+Critérios de aceite:
+- Função retorna total de Folhinhas.
+- Função retorna razões legíveis.
+- Baixa gera +1, média +3, alta +5, crítica +8.
+- Bônus antes do prazo e checklist completo são considerados.
+- Testes unitários cobrem os principais casos.
+```
+
+## Task 4.4 — Registrar Folhinhas ao concluir tarefa
+
+### Objetivo
+
+Criar transações de Folhinhas quando uma tarefa for concluída.
+
+### Prompt sugerido
+
+```text
+Implemente o registro de Folhinhas ao marcar uma tarefa como concluída. Use leaf_transactions e marque leaf_awarded_at na tarefa para evitar ganho duplicado. Mostre mensagem discreta do mascote após o ganho.
+
+Critérios de aceite:
+- Concluir tarefa cria transação positiva.
+- Tarefa não gera ganho duplicado se concluída novamente sem regra explícita.
+- Saldo reflete a soma das transações.
+- Mensagem usa tom calmo e afetivo.
+```
+
+## Task 4.5 — Criar loja de recompensas
+
+### Objetivo
+
+Permitir resgate de recompensas com Folhinhas.
+
+### Prompt sugerido
+
+```text
+Implemente a tela de recompensas do MVP. O usuário deve ver saldo, recompensas ativas, custo e botão de resgate. O resgate só deve ocorrer se houver saldo suficiente. Ao resgatar, crie reward_redemption com status requested e leaf_transaction negativa.
+
+Critérios de aceite:
+- Saldo de Folhinhas aparece na tela.
+- Recompensas padrão aparecem.
+- Resgate valida saldo suficiente.
+- Resgate cria histórico.
+- Não há lógica de pagamento, ranking ou punição.
+```
+
 ## Task 5.1 — Criar calendário interno
 
 ### Objetivo
@@ -312,20 +369,4 @@ Critérios de aceite:
 - Não usa IA paga.
 ```
 
-## Task 9.1 — Preparar estrutura de gamificação
-
-### Objetivo
-
-Criar base futura das Folhinhas.
-
-### Prompt sugerido
-
-```text
-Prepare a estrutura de gamificação sem ativar a loja na UI principal. Crie documentação e, se apropriado, migrations para reward_items, coin_transactions e reward_redemptions. Não adicione punições por atraso.
-
-Critérios de aceite:
-- Estrutura futura está documentada.
-- Não interfere no MVP.
-- Regras são positivas, sem punição.
-```
 

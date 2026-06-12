@@ -5,7 +5,7 @@
 ```text
 Você está trabalhando no projeto Slothdule.
 
-Slothdule é um planner pessoal/profissional em formato PWA, feito com Next.js, TypeScript, Tailwind e Supabase. O app será usado inicialmente por uma pessoa em Android e Windows. O objetivo é reduzir acúmulo de demandas, esquecimento e priorização incorreta, oferecendo tela Hoje, calendário, timeline, carga diária, checklists, lembretes, anexos por link/áudio e priorização por regras.
+Slothdule é um planner pessoal/profissional em formato PWA, feito com Next.js, TypeScript, Tailwind e Supabase. O app será usado inicialmente por uma pessoa em Android e Windows. O objetivo é reduzir acúmulo de demandas, esquecimento e priorização incorreta, oferecendo tela Hoje, calendário, timeline, carga diária, checklists, lembretes, anexos por link/áudio, priorização por regras e gamificação com Folhinhas/recompensas afetivas no MVP.
 
 O estilo visual deve ser minimalista, mas aconchegante. O mascote do app é um bicho-preguiça. O tom do app deve ser calmo, gentil e organizado.
 
@@ -145,3 +145,56 @@ Critérios:
 Não altere funcionalidades. Ajuste apenas UI/UX.
 ```
 
+
+
+## 8. Prompt para implementar Folhinhas
+
+```text
+Implemente ou revise a gamificação com Folhinhas no Slothdule.
+
+Regras de produto:
+- Folhinhas fazem parte do MVP.
+- Ganhos devem ser positivos e explicáveis.
+- Não deve haver punição por atraso.
+- Saldo deve ser calculado a partir do histórico de transações.
+- A conclusão de uma mesma tarefa não deve gerar Folhinhas repetidas indevidamente.
+
+Regras iniciais:
+- baixa: +1
+- média: +3
+- alta: +5
+- crítica: +8
+- conclusão antes do prazo: bônus +2
+- checklist completo: bônus +2
+
+A função deve retornar:
+- total de Folhinhas;
+- transações sugeridas;
+- razões legíveis para o usuário.
+
+Inclua testes unitários para os principais casos.
+```
+
+## 9. Prompt para implementar loja de recompensas
+
+```text
+Implemente ou revise a loja de recompensas do Slothdule.
+
+Regras de produto:
+- Recompensas fazem parte do MVP.
+- O usuário deve ver saldo de Folhinhas.
+- O usuário deve ver recompensas ativas e seus custos.
+- O usuário só pode resgatar se tiver saldo suficiente.
+- O resgate deve criar reward_redemption e uma leaf_transaction negativa.
+- Status inicial do resgate: requested.
+- Não implementar pagamentos, ranking ou competição social.
+
+Recompensas padrão:
+- Beijo — 5
+- Café especial — 10
+- Noite de filme — 25
+- Jantar escolhido por ele — 50
+- Presente surpresa — 80
+- Final de semana especial — 150
+- Viagem — 300
+```

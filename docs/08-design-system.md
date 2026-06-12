@@ -133,16 +133,20 @@ Exemplo:
 - “Você está improdutivo.”
 - “Atrasado de novo.”
 
-## 9. Gamificação visual futura
+## 9. Gamificação visual no MVP
 
 Moeda: **Folhinhas**.
+
+A gamificação faz parte do MVP, mas deve continuar discreta, afetiva e sem pressão.
 
 Visual sugerido:
 
 - ícone de folha;
 - animação discreta ao ganhar;
 - saldo visível, mas não dominante;
-- loja de recompensas com cards aconchegantes.
+- loja de recompensas com cards aconchegantes;
+- mensagens de ganho sem tom de cobrança;
+- nenhuma indicação visual de punição por atraso.
 
 ## 10. Acessibilidade
 

@@ -41,7 +41,10 @@ Responsável por:
 - captura rápida;
 - gravação de áudio;
 - permissões de notificação;
-- experiência PWA.
+- experiência PWA;
+- saldo de Folhinhas;
+- loja de recompensas;
+- histórico de transações.
 
 ### Supabase
 
@@ -53,7 +56,8 @@ Responsável por:
 - armazenamento de áudio e arquivos futuros;
 - sincronização em tempo real;
 - APIs automáticas;
-- futuras funções serverless.
+- futuras funções serverless;
+- persistência de Folhinhas, recompensas e resgates.
 
 ### Vercel
 
@@ -175,7 +179,33 @@ Parser deve detectar:
 - termos de trabalho: POC, proposta, cliente, relatório, reunião;
 - possível checklist padrão.
 
-## 9. Futuras integrações
+## 9. Gamificação no MVP
+
+A gamificação deve ficar em módulos próprios para não misturar regras de recompensa com CRUD de tarefas.
+
+```text
+Tarefa concluída
+↓
+Função de cálculo de Folhinhas
+↓
+Registro em leaf_transactions
+↓
+Saldo recalculado
+↓
+Feedback discreto do mascote
+```
+
+Módulos sugeridos:
+
+```text
+src/features/rewards/
+src/features/leaf-transactions/
+src/lib/rewards/
+```
+
+A função de cálculo de Folhinhas deve ser pura e testável. Ela não deve aplicar punições por atraso.
+
+## 10. Futuras integrações
 
 ### Google Calendar
 
@@ -206,7 +236,7 @@ Possíveis usos:
 - lembretes;
 - áudios.
 
-## 10. Estrutura sugerida de código
+## 11. Estrutura sugerida de código
 
 ```text
 src/
@@ -232,6 +262,7 @@ src/
     timeline/
     calendar/
     rewards/
+    leaf-transactions/
   lib/
     supabase/
     priority/
@@ -239,10 +270,11 @@ src/
     notifications/
     audio/
     date/
+    rewards/
   types/
 ```
 
-## 11. Estratégia de desenvolvimento
+## 12. Estratégia de desenvolvimento
 
 1. Começar com documentação.
 2. Criar base Next.js.
@@ -251,14 +283,16 @@ src/
 5. Implementar autenticação.
 6. Implementar CRUD de tarefas.
 7. Implementar tela Hoje.
-8. Implementar calendário e timeline.
-9. Implementar lembretes.
-10. Implementar áudio e links.
-11. Implementar priorização por regras.
-12. Implementar captura rápida.
-13. Só depois integrar Telegram/WhatsApp/IA.
+8. Implementar ganho de Folhinhas por conclusão.
+9. Implementar loja de recompensas.
+10. Implementar calendário e timeline.
+11. Implementar lembretes.
+12. Implementar áudio e links.
+13. Implementar priorização por regras.
+14. Implementar captura rápida.
+15. Só depois integrar Telegram/WhatsApp/IA.
 
-## 12. Requisitos não funcionais
+## 13. Requisitos não funcionais
 
 - Responsivo para Android e Windows.
 - Interface rápida.
@@ -269,7 +303,7 @@ src/
 - Código revisável pelo Codex.
 - Sem bibliotecas desnecessárias.
 
-## 13. Referências técnicas oficiais
+## 14. Referências técnicas oficiais
 
 - Next.js PWA Guide: https://nextjs.org/docs/app/guides/progressive-web-apps
 - Supabase Docs: https://supabase.com/docs

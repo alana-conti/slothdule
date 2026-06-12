@@ -230,20 +230,64 @@ Evitar culpa. Usar linguagem calma:
 
 > “Essa tarefa passou do prazo. Quer reorganizar?”
 
-## 10. Fluxo futuro: resgatar recompensa
+## 10. Fluxo MVP: ganhar Folhinhas
 
 ```text
-Usuário conclui tarefas
+Usuário conclui uma tarefa
 ↓
-Ganha Folhinhas
+App verifica prioridade, prazo e checklist
 ↓
-Acessa loja de recompensas
+App calcula Folhinhas ganhas
+↓
+App registra transação positiva
+↓
+Saldo é atualizado
+↓
+Mascote exibe mensagem gentil de progresso
+```
+
+### Exemplo
+
+```text
+Tarefa concluída: Revisar proposta da POC
+Prioridade: alta
+Ganho base: +5 Folhinhas
+Bônus checklist completo: +2 Folhinhas
+Total ganho: +7 Folhinhas
+Saldo atual: 52 Folhinhas
+```
+
+### Regras de tom
+
+- Não usar punições por atraso.
+- Não remover Folhinhas automaticamente por tarefas vencidas.
+- Não transformar o app em cobrança de produtividade.
+- Usar frases curtas, positivas e afetivas.
+
+Exemplo de mensagem:
+
+> “Mais uma tarefa saiu da árvore. Você ganhou 7 Folhinhas.”
+
+## 11. Fluxo MVP: resgatar recompensa
+
+```text
+Usuário acessa Folhinhas/Recompensas
+↓
+Visualiza saldo atual
+↓
+Visualiza recompensas disponíveis
 ↓
 Escolhe recompensa
 ↓
-Confirma resgate
+App verifica se há saldo suficiente
 ↓
-Recompensa fica como solicitada/pendente
+Usuário confirma resgate
+↓
+App registra resgate
+↓
+App registra transação negativa
+↓
+Recompensa fica com status solicitado
 ```
 
 ### Exemplo
@@ -251,6 +295,17 @@ Recompensa fica como solicitada/pendente
 ```text
 Saldo: 52 Folhinhas
 Recompensa: Noite de filme — 25 Folhinhas
-Status: Resgatada
+Saldo após resgate: 27 Folhinhas
+Status: Solicitada
 ```
+
+### Exemplo de recompensas iniciais
+
+- Beijo.
+- Café especial.
+- Noite de filme.
+- Jantar escolhido por ele.
+- Presente surpresa.
+- Final de semana especial.
+- Viagem.
 

@@ -16,6 +16,8 @@ Reduzir acúmulo de demandas, esquecimento e priorização incorreta por meio de
 - lembretes com notificações discretas;
 - anexos por link e áudio;
 - priorização inteligente por regras;
+- gamificação com Folhinhas no MVP;
+- loja de recompensas afetivas;
 - base preparada para futuras integrações com Google Calendar, Telegram, WhatsApp e IA generativa.
 
 ## Stack recomendada
@@ -28,6 +30,45 @@ Reduzir acúmulo de demandas, esquecimento e priorização incorreta por meio de
 - **Deploy:** Vercel
 - **Repositório:** GitHub
 - **Assistência de desenvolvimento:** Codex
+
+## Requisitos
+
+- Node.js 20.9 ou superior.
+- npm 10 ou superior.
+
+## Instalação
+
+```bash
+npm install
+```
+
+Se precisar configurar variáveis locais, copie `.env.example` para `.env.local`
+e preencha apenas com valores do seu ambiente. Nunca versione o arquivo
+`.env.local`.
+
+## Como rodar
+
+Para iniciar o ambiente de desenvolvimento:
+
+```bash
+npm run dev
+```
+
+Abra [http://localhost:3000](http://localhost:3000) no navegador.
+
+Para validar o projeto:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Para executar a versão de produção após o build:
+
+```bash
+npm run start
+```
 
 ## Estrutura sugerida
 
@@ -44,6 +85,7 @@ slothdule/
     07-codex-task-plan.md
     08-design-system.md
     09-prompt-pack.md
+    10-gamification.md
   supabase/
     migrations/
       0001_initial_schema.sql
@@ -67,10 +109,10 @@ slothdule/
 7. [`docs/07-codex-task-plan.md`](docs/07-codex-task-plan.md) — backlog inicial em tarefas executáveis.
 8. [`docs/08-design-system.md`](docs/08-design-system.md) — identidade visual, tom e mascote.
 9. [`docs/09-prompt-pack.md`](docs/09-prompt-pack.md) — prompts prontos para uso com Codex.
+10. [`docs/10-gamification.md`](docs/10-gamification.md) — regras de Folhinhas e recompensas do MVP.
 
 ## Filosofia do produto
 
 O Slothdule não deve ser um app que gera culpa. Ele deve funcionar como um companheiro calmo de organização:
 
 > Uma coisa de cada vez. Com clareza, afeto e constância.
-

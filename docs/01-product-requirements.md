@@ -2,11 +2,11 @@
 
 ## 1. Visão geral
 
-**Slothdule** é um planner pessoal/profissional com mascote de bicho-preguiça, pensado para organizar demandas de rotina com calma, clareza e priorização por prazo.
+**Slothdule** é um planner pessoal/profissional com mascote de bicho-preguiça, pensado para organizar demandas de rotina com calma, clareza, priorização por prazo e pequenas recompensas afetivas.
 
 O app será usado inicialmente por uma pessoa que trabalha com engenharia de IA, elaboração e venda de POCs de IA e relatórios de maturidade. Ele já utiliza Trello e Google Calendar, mas enfrenta dificuldade com acúmulo de demandas, esquecimento e priorização incorreta.
 
-O objetivo inicial é criar um presente funcional e privado, com possibilidade futura de expansão para outros usuários.
+O objetivo inicial é criar um presente funcional e privado, com possibilidade futura de expansão para outros usuários. A gamificação com **Folhinhas** e recompensas afetivas faz parte do MVP, pois reforça o caráter pessoal do presente e transforma conclusão de tarefas em reconhecimento positivo.
 
 ## 2. Problema a resolver
 
@@ -17,7 +17,8 @@ O usuário atual possui muitas demandas simultâneas, registradas em ferramentas
 - priorizar corretamente por prazo e criticidade;
 - visualizar a duração das atividades no tempo;
 - compreender carga diária/semanal;
-- manter contexto de cada tarefa por meio de links, áudios e checklists.
+- manter contexto de cada tarefa por meio de links, áudios e checklists;
+- criar uma experiência de progresso mais leve, afetiva e motivadora.
 
 ## 3. Público inicial
 
@@ -45,6 +46,8 @@ O Slothdule deve ajudar o usuário a responder rapidamente:
 5. Quais entregas estão próximas?
 6. Quais tarefas pertencem a qual cliente/projeto/POC?
 7. Onde guardei o link, áudio ou observação daquela tarefa?
+8. Quantas Folhinhas ganhei pelo meu progresso?
+9. Quais recompensas posso resgatar?
 
 ## 5. Princípios do produto
 
@@ -53,8 +56,9 @@ O Slothdule deve ajudar o usuário a responder rapidamente:
 3. **Entrada rápida, mas não necessariamente instantânea:** o usuário aceita levar alguns segundos para registrar uma tarefa corretamente.
 4. **Contexto preservado:** tarefas podem guardar checklist, links, áudio e observações.
 5. **Prioridade explicável:** a priorização inicial deve ser baseada em regras transparentes, não em IA opaca.
-6. **MVP útil antes de ser completo:** começar com o que resolve o problema real.
-7. **Preparado para crescer:** mesmo sendo privado no início, o app deve ter base técnica compatível com multiusuários no futuro.
+6. **Recompensa sem culpa:** Folhinhas devem reconhecer progresso, nunca punir atraso.
+7. **MVP útil antes de ser completo:** começar com o que resolve o problema real.
+8. **Preparado para crescer:** mesmo sendo privado no início, o app deve ter base técnica compatível com multiusuários no futuro.
 
 ## 6. Escopo do MVP
 
@@ -83,20 +87,26 @@ O Slothdule deve ajudar o usuário a responder rapidamente:
 - Áudio gravado e vinculado à tarefa.
 - Priorização por regras.
 - Captura rápida por texto com sugestão de preenchimento.
+- Moeda interna **Folhinhas**.
+- Ganho automático de Folhinhas ao concluir tarefas.
+- Saldo de Folhinhas.
+- Histórico de transações de Folhinhas.
+- Loja de recompensas afetivas.
+- Resgate de recompensas.
+- Mensagens do mascote associadas a progresso e resgates.
 
 ### Funcionalidades fora do MVP, mas planejadas
 
 - Upload de PDF e imagem.
 - Sincronização com Google Calendar.
-- Pipeline comercial.
+- Pipeline comercial avançado.
 - Telegram bot.
 - WhatsApp bot.
 - IA generativa paga ou local.
 - Assistente em formato de chat.
-- Gamificação com moedas do app.
-- Loja de recompensas afetivas.
 - Multiusuários completo.
 - Publicação como produto aberto.
+- Pagamentos ou assinaturas.
 
 ## 7. Categorias iniciais
 
@@ -127,8 +137,9 @@ O Slothdule deve ajudar o usuário a responder rapidamente:
 - Lembrete.
 - Anexo.
 - Áudio.
-- Recompensa futura.
-- Transação de moedas futura.
+- Item de recompensa.
+- Transação de Folhinhas.
+- Resgate de recompensa.
 
 ## 9. Visualizações obrigatórias
 
@@ -142,7 +153,9 @@ Tela inicial do app. Deve mostrar:
 - carga estimada do dia;
 - tarefas críticas;
 - botão de nova tarefa;
-- botão de captura rápida.
+- botão de captura rápida;
+- saldo discreto de Folhinhas;
+- feedback do mascote quando tarefas forem concluídas.
 
 ### Calendário
 
@@ -162,6 +175,17 @@ Deve mostrar duração das tarefas entre data de início e data de prazo. Precis
 
 Deve somar tempo estimado das tarefas abertas por dia e indicar dias sobrecarregados.
 
+### Folhinhas e recompensas
+
+Deve mostrar:
+
+- saldo atual;
+- histórico de ganhos e gastos;
+- recompensas disponíveis;
+- custo de cada recompensa;
+- confirmação de resgate;
+- status do resgate.
+
 ## 10. Notificações
 
 As notificações devem ser discretas e gentis.
@@ -171,6 +195,7 @@ Exemplos:
 - “Uma tarefa importante está chegando: revisar proposta da POC.”
 - “Hoje há uma tarefa crítica para revisar.”
 - “Seu dia parece cheio. Vale reorganizar?”
+- “Você concluiu uma tarefa e ganhou Folhinhas.”
 
 O app não deve usar mensagens alarmistas ou culpabilizantes.
 
@@ -197,21 +222,55 @@ Exemplo:
 
 > “Prioridade alta porque vence hoje e ainda não foi iniciada.”
 
-## 12. Gamificação futura
+## 12. Gamificação no MVP: Folhinhas
 
-O Slothdule poderá ter uma moeda interna chamada **Folhinhas**.
+A moeda interna do Slothdule será chamada **Folhinhas**.
 
-As folhinhas serão concedidas por tarefas concluídas e poderão ser trocadas por recompensas afetivas, como:
+As Folhinhas devem ser concedidas por tarefas concluídas e poderão ser trocadas por recompensas afetivas. A gamificação deve ser positiva, discreta e opcional. Não deve haver punição por atraso, perda automática de saldo ou mensagens de culpa.
 
-- beijo;
-- café especial;
-- noite de filme;
-- jantar;
-- presente surpresa;
-- final de semana;
-- viagem.
+### Regras iniciais de ganho
 
-A gamificação deve ser positiva. Não deve haver punições por atraso na versão inicial.
+| Evento | Folhinhas |
+|---|---:|
+| Concluir tarefa de prioridade baixa | +1 |
+| Concluir tarefa de prioridade média | +3 |
+| Concluir tarefa de prioridade alta | +5 |
+| Concluir tarefa de prioridade crítica | +8 |
+| Concluir antes do prazo | bônus +2 |
+| Concluir checklist completo | bônus +2 |
+| Fechar semana sem tarefa crítica atrasada | bônus +10 |
+
+Para o MVP, o ganho por conclusão de tarefa é obrigatório. Os bônus podem ser implementados na mesma estrutura, mas devem ser testáveis e explicáveis.
+
+### Recompensas iniciais sugeridas
+
+| Recompensa | Custo sugerido |
+|---|---:|
+| Beijo | 5 |
+| Café especial | 10 |
+| Noite de filme | 25 |
+| Jantar escolhido por ele | 50 |
+| Presente surpresa | 80 |
+| Final de semana especial | 150 |
+| Viagem | 300 |
+
+As recompensas devem ser configuráveis para que o app possa crescer no futuro.
+
+### Estados de resgate
+
+- solicitado;
+- entregue;
+- cancelado.
+
+### Comportamento esperado
+
+1. Usuário conclui uma tarefa.
+2. O app calcula Folhinhas de acordo com prioridade e bônus.
+3. O app registra uma transação positiva.
+4. O saldo é atualizado.
+5. O mascote mostra uma mensagem curta e gentil.
+6. Usuário pode acessar a loja e resgatar uma recompensa.
+7. O resgate gera uma transação negativa e fica registrado no histórico.
 
 ## 13. Critérios de sucesso do MVP
 
@@ -225,6 +284,9 @@ O MVP será considerado bem-sucedido se:
 6. Lembretes reduzirem esquecimento.
 7. O usuário conseguir acessar pelo Android e pelo Windows.
 8. O app for mais agradável e pessoal do que uma lista fria de tarefas.
+9. O usuário ganhar Folhinhas ao concluir tarefas.
+10. O usuário conseguir ver saldo, histórico e recompensas disponíveis.
+11. O usuário conseguir resgatar uma recompensa sem atrito.
 
 ## 14. Não objetivos do MVP
 
@@ -236,5 +298,5 @@ O MVP não precisa:
 - ter app nativo publicado em loja;
 - funcionar como sistema corporativo para equipes;
 - ter pagamentos ou assinaturas;
-- aceitar múltiplos usuários externos.
-
+- aceitar múltiplos usuários externos;
+- ter economia complexa, ranking, competição social ou punições.
