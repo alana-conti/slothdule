@@ -4,6 +4,7 @@ import {
   updateAttachmentAction,
 } from "@/features/tasks/attachment-actions";
 import { AudioRecorder } from "@/features/tasks/audio-recorder";
+import { FileUploader } from "@/features/tasks/file-uploader";
 import type { Attachment } from "@/types/tasks";
 
 type AttachmentListProps = {
@@ -14,6 +15,19 @@ type AttachmentListProps = {
 export function AttachmentList({ attachments, taskId }: AttachmentListProps) {
   const links = attachments.filter((att) => att.type === "link");
   const audios = attachments.filter((att) => att.type === "audio");
+  const files = attachments.filter((att) => att.type === "file");
+
+  function formatFileSize(sizeBytes: number | null) {
+    if (!sizeBytes) {
+      return null;
+    }
+
+    if (sizeBytes < 1024 * 1024) {
+      return `${(sizeBytes / 1024).toFixed(1)} KB`;
+    }
+
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
 
   return (
     <section className="rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:p-8">
@@ -169,6 +183,79 @@ export function AttachmentList({ attachments, taskId }: AttachmentListProps) {
       </div>
 
       {/* Seção de Áudio */}
+      <div className="mt-8 pt-6 border-t border-sloth-border/50">
+        <h3 className="text-sm font-semibold text-sloth-ink border-b border-sloth-border/30 pb-1.5 mb-3">📄 Documentos e PDFs</h3>
+
+        {files.length > 0 ? (
+          <ol className="grid gap-3">
+            {files.map((file) => {
+              const size = formatFileSize(file.sizeBytes);
+
+              return (
+                <li
+                  className="rounded-2xl border border-sloth-border bg-sloth-card p-4"
+                  key={file.id}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex max-w-full items-center gap-1.5 text-sm font-semibold text-sloth-forest hover:text-sloth-moss hover:underline"
+                        title={file.url}
+                      >
+                        <span>📄</span>
+                        <span className="truncate">{file.label || "Documento anexado"}</span>
+                        <span className="text-[10px] text-sloth-muted">↗</span>
+                      </a>
+                      <p className="mt-0.5 text-xs text-sloth-muted">
+                        {size ? `${size} · ` : ""}
+                        {file.mimeType || "arquivo"} ·{" "}
+                        {new Intl.DateTimeFormat("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          timeZone: "America/Sao_Paulo",
+                        }).format(new Date(file.createdAt))}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        className="inline-flex min-h-10 items-center rounded-xl border border-sloth-border px-4 text-xs font-semibold text-sloth-forest transition hover:bg-sloth-beige"
+                        download
+                        href={file.url}
+                      >
+                        Baixar
+                      </a>
+
+                      <form action={deleteAttachmentAction}>
+                        <input name="taskId" type="hidden" value={taskId} />
+                        <input name="attachmentId" type="hidden" value={file.id} />
+                        <button
+                          className="min-h-10 rounded-xl border border-sloth-terracotta/35 px-4 text-xs font-semibold text-sloth-terracotta transition hover:bg-sloth-terracotta/10 cursor-pointer"
+                          type="submit"
+                        >
+                          Remover
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-sloth-border px-5 py-6 text-center text-sloth-muted text-xs bg-sloth-cream/10">
+            Nenhum documento anexado.
+          </p>
+        )}
+
+        <FileUploader taskId={taskId} />
+      </div>
+
       <div className="mt-8 pt-6 border-t border-sloth-border/50">
         <h3 className="text-sm font-semibold text-sloth-ink border-b border-sloth-border/30 pb-1.5 mb-3">🎙️ Gravações de Áudio</h3>
         

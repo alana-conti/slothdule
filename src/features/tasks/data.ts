@@ -56,6 +56,13 @@ type SubtaskRow = {
 const taskSelect =
   "id, user_id, category_id, client_id, project_id, title, description, work_context, status, priority, start_date, due_date, due_time, estimated_minutes, completed_at, leaf_awarded_at, created_at, updated_at";
 
+type RewardItemInput = {
+  title: string;
+  description: string | null;
+  cost: number;
+  icon: string | null;
+};
+
 async function getAuthenticatedClient() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
@@ -184,10 +191,9 @@ export async function updateTask(
 ): Promise<{ leavesAwarded: number }> {
   const { supabase, userId } = await getAuthenticatedClient();
 
-  // 1. Fetch current task to see if it is already completed and if it has leaf_awarded_at
   const { data: currentTask, error: fetchError } = await supabase
     .from("tasks")
-    .select("id, status, leaf_awarded_at, priority, due_date, category_id, client_id, project_id")
+    .select("id, status, completed_at, leaf_awarded_at")
     .eq("id", taskId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -196,88 +202,19 @@ export async function updateTask(
     throw new Error("Não foi possível carregar a tarefa para atualização.");
   }
 
-  const payload: ReturnType<typeof toTaskPayload> & {
-    leaf_awarded_at?: string | null;
-  } = toTaskPayload(input);
-  let leavesAddedCount = 0;
+  const payload = toTaskPayload(input);
+  const shouldReportAward =
+    input.status === "done" && !currentTask.leaf_awarded_at;
 
-  // 2. Check if status is transitioning to 'done' and leaf_awarded_at is not set yet
-  if (input.status === "done" && !currentTask.leaf_awarded_at) {
-    // Fetch task's subtasks to check for checklist bonus
-    const subtasks = await listSubtasks(taskId);
-
-    // Construct a Task object for the rewards function
-    const fullTaskForRewards: Task = {
-      id: taskId,
-      userId,
-      categoryId: currentTask.category_id,
-      title: input.title,
-      description: input.description,
-      workContext: input.workContext,
-      status: input.status,
-      priority: input.priority,
-      startDate: input.startDate,
-      dueDate: input.dueDate,
-      dueTime: input.dueTime,
-      estimatedMinutes: input.estimatedMinutes,
-      completedAt: payload.completed_at,
-      leafAwardedAt: null,
-      clientId: currentTask.client_id,
-      projectId: currentTask.project_id,
-      createdAt: "",
-      updatedAt: "",
-    };
-
-    // Calculate Folhinhas
-    const completedAtDateStr = payload.completed_at
-      ? payload.completed_at.split("T")[0]
-      : new Date().toISOString().split("T")[0];
-
-    const { calculateCompletedTaskLeaves } = await import("@/lib/rewards");
-    const rewardsResult = calculateCompletedTaskLeaves(
-      fullTaskForRewards,
-      completedAtDateStr,
-      subtasks,
-    );
-
-    if (rewardsResult.totalLeaves > 0) {
-      const nowStr = new Date().toISOString();
-      payload.leaf_awarded_at = nowStr;
-
-      // Insert leaf transactions
-      const transactionRows = rewardsResult.reasons.map((reason) => {
-        let type:
-          | "task_completion"
-          | "early_completion_bonus"
-          | "checklist_bonus" = "task_completion";
-        if (reason.description.includes("antes do prazo")) {
-          type = "early_completion_bonus";
-        } else if (reason.description.includes("checklist")) {
-          type = "checklist_bonus";
-        }
-
-        return {
-          user_id: userId,
-          task_id: taskId,
-          type,
-          amount: reason.points,
-          reason: reason.description,
-        };
-      });
-
-      const { error: txError } = await supabase
-        .from("leaf_transactions")
-        .insert(transactionRows);
-
-      if (txError) {
-        throw new Error("Não foi possível registrar as Folhinhas ganhas.");
-      }
-
-      leavesAddedCount = rewardsResult.totalLeaves;
-    }
+  if (
+    input.status === "done" &&
+    currentTask.status === "done" &&
+    currentTask.completed_at
+  ) {
+    payload.completed_at = currentTask.completed_at;
   }
 
-  // 3. Update the task
+  // The database trigger awards Folhinhas atomically with this update.
   const { data, error } = await supabase
     .from("tasks")
     .update(payload)
@@ -290,7 +227,26 @@ export async function updateTask(
     throw new Error("Não foi possível atualizar essa tarefa.");
   }
 
-  return { leavesAwarded: leavesAddedCount };
+  if (!shouldReportAward) {
+    return { leavesAwarded: 0 };
+  }
+
+  const { data: transactions, error: transactionsError } = await supabase
+    .from("leaf_transactions")
+    .select("amount")
+    .eq("user_id", userId)
+    .eq("task_id", taskId);
+
+  if (transactionsError) {
+    return { leavesAwarded: 0 };
+  }
+
+  return {
+    leavesAwarded: transactions.reduce(
+      (total, transaction) => total + transaction.amount,
+      0,
+    ),
+  };
 }
 
 export async function archiveTask(taskId: string) {
@@ -559,6 +515,27 @@ export async function listRewardRedemptions(): Promise<RewardRedemption[]> {
   }));
 }
 
+export async function createRewardItem(input: RewardItemInput): Promise<void> {
+  const { supabase, userId } = await getAuthenticatedClient();
+  const { error } = await supabase.from("reward_items").insert({
+    user_id: userId,
+    title: input.title,
+    description: input.description,
+    cost: input.cost,
+    icon: input.icon,
+    is_default: false,
+    is_active: true,
+  });
+
+  if (error?.code === "23505") {
+    throw new Error("Você já tem uma recompensa com esse nome.");
+  }
+
+  if (error) {
+    throw new Error("Não foi possível criar a recompensa.");
+  }
+}
+
 export async function redeemReward(rewardItemId: string): Promise<void> {
   const { supabase, userId } = await getAuthenticatedClient();
 
@@ -611,6 +588,28 @@ export async function redeemReward(rewardItemId: string): Promise<void> {
 
   if (txError) {
     throw new Error("Não foi possível debitar o valor em Folhinhas.");
+  }
+}
+
+export async function markRewardRedemptionDelivered(
+  redemptionId: string,
+): Promise<void> {
+  const { supabase, userId } = await getAuthenticatedClient();
+  const { data, error } = await supabase
+    .from("reward_redemptions")
+    .update({
+      status: "delivered",
+      delivered_at: new Date().toISOString(),
+      cancelled_at: null,
+    })
+    .eq("id", redemptionId)
+    .eq("user_id", userId)
+    .eq("status", "requested")
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error("Não foi possível finalizar esse resgate.");
   }
 }
 

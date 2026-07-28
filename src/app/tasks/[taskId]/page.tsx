@@ -5,6 +5,8 @@ import { getTask, listSubtasks, listReminders, listAttachments } from "@/feature
 import { SubtaskList } from "@/features/tasks/subtask-list";
 import { ReminderList } from "@/features/tasks/reminder-list";
 import { AttachmentList } from "@/features/tasks/attachment-list";
+import { DeleteTaskControl } from "@/features/tasks/delete-task-control";
+import { TaskStatusControl } from "@/features/tasks/task-status-control";
 import { createClient } from "@/lib/supabase/server";
 import type { TaskPriority, TaskStatus } from "@/types/tasks";
 
@@ -112,6 +114,15 @@ export default async function TaskDetailPage({
               </dd>
             </div>
           </dl>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <TaskStatusControl
+              returnTo="detail"
+              status={task.status}
+              taskId={task.id}
+            />
+            <DeleteTaskControl taskId={task.id} taskTitle={task.title} />
+          </div>
         </header>
 
         {message ? (

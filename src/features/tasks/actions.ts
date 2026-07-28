@@ -5,8 +5,11 @@ import { redirect } from "next/navigation";
 
 import {
   archiveTask,
+  createRewardItem,
   createTask,
   deleteTask,
+  getTask,
+  markRewardRedemptionDelivered,
   updateTask,
   redeemReward,
 } from "@/features/tasks/data";
@@ -38,6 +41,17 @@ function getEstimatedMinutes(formData: FormData) {
 
   if (!Number.isInteger(parsed) || parsed < 0) {
     throw new Error("A estimativa deve ser um número inteiro positivo.");
+  }
+
+  return parsed;
+}
+
+function getPositiveInteger(formData: FormData, field: string, label: string) {
+  const value = getText(formData, field);
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${label} deve ser um número inteiro maior que zero.`);
   }
 
   return parsed;
@@ -127,6 +141,7 @@ export async function updateTaskAction(formData: FormData) {
   }
 
   revalidatePath("/today");
+  revalidatePath("/rewards");
 
   if (result && result.leavesAwarded > 0) {
     redirectWithMessage(
@@ -136,6 +151,67 @@ export async function updateTaskAction(formData: FormData) {
   }
 
   redirectWithMessage("message", "Tarefa atualizada com calma.");
+}
+
+export async function updateTaskStatusAction(formData: FormData) {
+  let taskId = "";
+  let returnPath = "/today";
+  let result;
+
+  try {
+    taskId = getTaskId(formData);
+    returnPath =
+      getText(formData, "returnTo") === "detail"
+        ? `/tasks/${taskId}`
+        : "/today";
+
+    const status = getText(formData, "status");
+
+    if (!taskStatuses.includes(status as TaskInput["status"])) {
+      throw new Error("Status inválido.");
+    }
+
+    const task = await getTask(taskId);
+
+    if (!task) {
+      throw new Error("Tarefa não encontrada.");
+    }
+
+    result = await updateTask(taskId, {
+      categoryId: task.categoryId,
+      title: task.title,
+      description: task.description,
+      workContext: task.workContext,
+      status: status as TaskInput["status"],
+      priority: task.priority,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      dueTime: task.dueTime,
+      estimatedMinutes: task.estimatedMinutes,
+    });
+  } catch (error) {
+    redirectWithMessage(
+      "error",
+      error instanceof Error
+        ? error.message
+        : "Não foi possível atualizar o status.",
+      returnPath,
+    );
+  }
+
+  revalidatePath("/today");
+  revalidatePath(`/tasks/${taskId}`);
+  revalidatePath("/rewards");
+
+  if (result && result.leavesAwarded > 0) {
+    redirectWithMessage(
+      "message",
+      `Tarefa concluída. +${result.leavesAwarded} Folhinhas para você.`,
+      returnPath,
+    );
+  }
+
+  redirectWithMessage("message", "Status atualizado.", returnPath);
 }
 
 export async function archiveTaskAction(formData: FormData) {
@@ -165,6 +241,9 @@ export async function deleteTaskAction(formData: FormData) {
   }
 
   revalidatePath("/today");
+  revalidatePath("/calendar");
+  revalidatePath("/timeline");
+  revalidatePath("/rewards");
   redirectWithMessage("message", "Tarefa excluída.");
 }
 
@@ -192,4 +271,55 @@ export async function redeemRewardAction(formData: FormData) {
     "Recompensa solicitada. A preguiça já anotou.",
     "/rewards",
   );
+}
+
+export async function createRewardItemAction(formData: FormData) {
+  try {
+    const title = getText(formData, "title");
+
+    if (!title) {
+      throw new Error("Dê um nome para a recompensa.");
+    }
+
+    await createRewardItem({
+      title,
+      description: getOptionalText(formData, "description"),
+      cost: getPositiveInteger(formData, "cost", "O custo"),
+      icon: getOptionalText(formData, "icon"),
+    });
+  } catch (error) {
+    redirectWithMessage(
+      "error",
+      error instanceof Error
+        ? error.message
+        : "Não foi possível criar a recompensa.",
+      "/rewards",
+    );
+  }
+
+  revalidatePath("/rewards");
+  redirectWithMessage("message", "Recompensa personalizada criada.", "/rewards");
+}
+
+export async function markRewardRedemptionDeliveredAction(formData: FormData) {
+  const redemptionId = getText(formData, "redemptionId");
+
+  if (!redemptionId) {
+    redirectWithMessage("error", "Resgate inválido.", "/rewards");
+  }
+
+  try {
+    await markRewardRedemptionDelivered(redemptionId);
+  } catch (error) {
+    redirectWithMessage(
+      "error",
+      error instanceof Error
+        ? error.message
+        : "Não foi possível finalizar o resgate.",
+      "/rewards",
+    );
+  }
+
+  revalidatePath("/rewards");
+  redirectWithMessage("message", "Resgate marcado como finalizado.", "/rewards");
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { pickMascotNotification } from "@/lib/mascot-notifications";
+
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -87,8 +89,10 @@ export function PwaNotificationManager() {
     if (permission !== "granted") return;
 
     navigator.serviceWorker.ready.then((registration) => {
-      registration.showNotification("Lembrete do Slothdule 🦥", {
-        body: "Hora de respirar fundo e fazer uma coisa de cada vez. Você está indo no seu ritmo. 🍃",
+      const notification = pickMascotNotification();
+
+      registration.showNotification(`${notification.title} 🦥`, {
+        body: notification.body,
         icon: "/images/sloth-mascot.png",
         badge: "/images/sloth-mascot.png",
         tag: "sloth-test-reminder",

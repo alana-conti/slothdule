@@ -53,3 +53,24 @@ export async function logout() {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
+export async function signUp(formData: FormData) {
+  const email = getRequiredField(formData, "email");
+  const password = getRequiredField(formData, "password");
+
+  if (!email || !password) {
+    redirect("/login?error=Preencha%20seu%20e-mail%20e%20sua%20senha.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect("/login?message=Conta%20criada!%20Agora%20você%20pode%20entrar%20com%20calma.");
+}

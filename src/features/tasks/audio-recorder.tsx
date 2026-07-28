@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { createAudioAttachmentAction } from "@/features/tasks/attachment-actions";
 
@@ -9,6 +10,7 @@ type AudioRecorderProps = {
 };
 
 export function AudioRecorder({ taskId }: AudioRecorderProps) {
+  const router = useRouter();
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -134,30 +136,43 @@ export function AudioRecorder({ taskId }: AudioRecorderProps) {
       setUploadError(null);
 
       const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-      // Defensive check/create of the storage bucket
-      try {
-        const { data: buckets } = await supabase.storage.listBuckets();
-        if (!buckets?.find((b) => b.id === "attachments")) {
-          await supabase.storage.createBucket("attachments", { public: true });
-        }
-      } catch (e) {
-        console.warn("Falha de RLS ao tentar listar/criar bucket:", e);
+      if (userError || !user) {
+        throw new Error("Sua sessão expirou. Entre novamente para salvar o áudio.");
       }
 
-      const fileName = `${taskId}/${Date.now()}.webm`;
+      const contentType = (audioBlob.type || "audio/webm").split(";")[0];
+      const extension =
+        contentType === "audio/mp4"
+          ? "m4a"
+          : contentType === "audio/ogg"
+            ? "ogg"
+            : contentType === "audio/mpeg"
+              ? "mp3"
+              : "webm";
+      const fileName = `${user.id}/${taskId}/${crypto.randomUUID()}.${extension}`;
       
       // Upload blob to Supabase Storage
       const { error: uploadErr } = await supabase.storage
         .from("attachments")
         .upload(fileName, audioBlob, {
-          contentType: "audio/webm",
+          contentType,
           cacheControl: "3600",
           upsert: false,
         });
 
       if (uploadErr) {
-        throw new Error(uploadErr.message);
+        if (uploadErr.message.toLowerCase().includes("bucket not found")) {
+          throw new Error(
+            "O armazenamento de áudio ainda não foi configurado. Aplique as migrations do Supabase.",
+          );
+        }
+
+        throw new Error(`Não foi possível enviar o áudio: ${uploadErr.message}`);
       }
 
       // Fetch public URL
@@ -170,10 +185,15 @@ export function AudioRecorder({ taskId }: AudioRecorderProps) {
       formData.append("taskId", taskId);
       formData.append("url", publicUrl);
       formData.append("label", label || "Gravação de Áudio");
-      formData.append("mimeType", audioBlob.type || "audio/webm");
+      formData.append("mimeType", contentType);
       formData.append("sizeBytes", String(audioBlob.size));
 
-      await createAudioAttachmentAction(formData);
+      const result = await createAudioAttachmentAction(formData);
+
+      if (result.error) {
+        await supabase.storage.from("attachments").remove([fileName]);
+        throw new Error(result.error);
+      }
 
       // Reset state
       setAudioBlob(null);
@@ -182,6 +202,7 @@ export function AudioRecorder({ taskId }: AudioRecorderProps) {
         setAudioUrl(null);
       }
       setLabel("");
+      router.refresh();
     } catch (err) {
       console.error("Erro ao salvar áudio:", err);
       setUploadError(err instanceof Error ? err.message : "Erro ao fazer upload do áudio.");

@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 
-import { login } from "./actions";
+import { login, signUp } from "./actions";
 
 type LoginPageProps = {
   searchParams: Promise<{
     error?: string;
+    message?: string;
   }>;
 };
 
@@ -19,7 +20,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     redirect("/today");
   }
 
-  const { error } = await searchParams;
+  const { error, message } = await searchParams;
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-10 sm:px-8">
@@ -70,6 +71,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           ) : null}
 
+          {message ? (
+            <p
+              className="mt-6 rounded-2xl border border-sloth-leaf/30 bg-sloth-leaf/10 px-4 py-3 text-sm leading-6 text-sloth-forest"
+              role="status"
+            >
+              {message}
+            </p>
+          ) : null}
+
           <form action={login} className="mt-7 space-y-5">
             <div>
               <label
@@ -107,12 +117,21 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               />
             </div>
 
-            <button
-              className="min-h-12 w-full rounded-2xl bg-sloth-moss px-5 font-semibold text-white transition hover:bg-sloth-forest focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-sloth-moss"
-              type="submit"
-            >
-              Entrar com calma
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                className="min-h-12 w-full rounded-2xl bg-sloth-moss px-5 font-semibold text-white transition hover:bg-sloth-forest focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-sloth-moss cursor-pointer"
+                type="submit"
+              >
+                Entrar com calma
+              </button>
+              <button
+                className="min-h-12 w-full rounded-2xl border border-sloth-border bg-sloth-card px-5 font-medium text-sloth-forest transition hover:bg-sloth-beige cursor-pointer"
+                formAction={signUp}
+                type="submit"
+              >
+                Criar nova conta
+              </button>
+            </div>
           </form>
         </div>
       </section>

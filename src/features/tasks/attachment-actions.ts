@@ -169,15 +169,52 @@ export async function createAudioAttachmentAction(formData: FormData) {
       sizeBytes,
     });
   } catch (error) {
-    redirectToTask(
-      taskId,
-      "error",
-      error instanceof Error
-        ? error.message
-        : "Não foi possível adicionar a gravação de áudio.",
-    );
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Não foi possível adicionar a gravação de áudio.",
+    };
   }
 
   refreshTask(taskId);
-  redirectToTask(taskId, "message", "Gravação de áudio adicionada.");
+  return { error: null };
+}
+
+export async function createFileAttachmentAction(formData: FormData) {
+  let taskId = "";
+
+  try {
+    taskId = getTaskId(formData);
+    const url = getText(formData, "url");
+
+    if (!url) {
+      throw new Error("Link do documento ausente.");
+    }
+
+    const label = getOptionalText(formData, "label") || "Documento anexado";
+    const mimeType = getOptionalText(formData, "mimeType");
+    const sizeBytes = formData.get("sizeBytes")
+      ? Number(formData.get("sizeBytes"))
+      : null;
+
+    await createAttachment({
+      taskId,
+      type: "file",
+      label,
+      url,
+      mimeType,
+      sizeBytes,
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Não foi possível adicionar o documento.",
+    };
+  }
+
+  refreshTask(taskId);
+  return { error: null };
 }

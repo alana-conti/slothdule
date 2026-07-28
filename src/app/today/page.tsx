@@ -5,15 +5,18 @@ import { redirect } from "next/navigation";
 import {
   archiveTaskAction,
   createTaskAction,
-  deleteTaskAction,
   updateTaskAction,
 } from "@/features/tasks/actions";
+import { DeleteTaskControl } from "@/features/tasks/delete-task-control";
 import { listCategories, listTasks, getUserLeafBalance } from "@/features/tasks/data";
 import { TaskForm } from "@/features/tasks/task-form";
 import { QuickCapture } from "@/features/tasks/quick-capture";
+import { TaskStatusControl } from "@/features/tasks/task-status-control";
 import {
   formatEstimatedMinutes,
   getDailyEstimatedMinutes,
+  getTaskDailyEstimatedMinutes,
+  getTaskDurationDays,
   getTodayDateKey,
   groupTasksForToday,
 } from "@/features/tasks/today";
@@ -21,8 +24,8 @@ import { calculatePriorityScore } from "@/lib/priority";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Task, TaskPriority, TaskStatus } from "@/types/tasks";
 
-import { logout } from "../login/actions";
 import { PwaNotificationManager } from "@/components/sloth/pwa-notification-manager";
+import { TopNavigation } from "@/components/sloth/top-navigation";
 
 const priorityLabels: Record<TaskPriority, string> = {
   low: "Baixa",
@@ -97,6 +100,10 @@ function TaskCard({
 }: TaskCardProps) {
   const todayDate = getTodayDateKey();
   const priorityResult = calculatePriorityScore(task, todayDate);
+  const durationDays = getTaskDurationDays(task);
+  const dailyEstimatedMinutes = Math.round(
+    getTaskDailyEstimatedMinutes(task),
+  );
 
   return (
     <article
@@ -192,26 +199,35 @@ function TaskCard({
           <p>Prazo: {formatDate(task.dueDate)}</p>
           {task.dueTime ? <p>Às {task.dueTime.slice(0, 5)}</p> : null}
           {task.estimatedMinutes !== null ? (
-            <p>{task.estimatedMinutes} min estimados</p>
+            durationDays > 1 ? (
+              <>
+                <p>{formatEstimatedMinutes(dailyEstimatedMinutes)} por dia</p>
+                <p>
+                  {formatEstimatedMinutes(task.estimatedMinutes)} em{" "}
+                  {durationDays} dias
+                </p>
+              </>
+            ) : (
+              <p>{formatEstimatedMinutes(task.estimatedMinutes)} estimados</p>
+            )
           ) : (
             <p>Sem estimativa</p>
           )}
         </div>
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-sloth-border/70 pt-4">
-        <Link
-          className="inline-flex min-h-10 items-center rounded-xl bg-sloth-moss px-4 text-sm font-semibold text-white transition hover:bg-sloth-forest"
-          href={`/tasks/${task.id}`}
-        >
-          Ver detalhes e subtarefas
-        </Link>
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-sloth-border/70 pt-4">
+        <TaskStatusControl
+          returnTo="today"
+          status={task.status}
+          taskId={task.id}
+        />
 
-        <details className="group w-full">
+        <details className="group relative">
           <summary className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-medium text-sloth-forest transition hover:bg-sloth-beige">
-            Editar tarefa
+            Editar
           </summary>
-          <div className="mt-4 rounded-2xl bg-sloth-beige/35 p-4 sm:p-5">
+          <div className="absolute left-0 top-full z-20 mt-3 w-[min(42rem,calc(100vw-3rem))] rounded-2xl border border-sloth-border bg-sloth-card p-4 shadow-soft sm:p-5">
             <TaskForm
               action={updateTaskAction}
               categories={categories}
@@ -231,17 +247,16 @@ function TaskCard({
               Arquivar
             </button>
           </form>
-        ) : (
-          <form action={deleteTaskAction}>
-            <input name="taskId" type="hidden" value={task.id} />
-            <button
-              className="min-h-10 rounded-xl border border-sloth-terracotta/35 bg-sloth-card px-4 text-sm font-medium text-sloth-terracotta transition hover:bg-sloth-terracotta/10"
-              type="submit"
-            >
-              Excluir permanentemente
-            </button>
-          </form>
-        )}
+        ) : null}
+
+        <DeleteTaskControl taskId={task.id} taskTitle={task.title} />
+
+        <Link
+          className="ml-auto inline-flex min-h-10 items-center rounded-xl bg-sloth-moss px-4 text-sm font-semibold text-white transition hover:bg-sloth-forest"
+          href={`/tasks/${task.id}`}
+        >
+          Ver detalhes e subtarefas
+        </Link>
       </div>
     </article>
   );
@@ -343,53 +358,20 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">
       <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-col gap-5 rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:flex-row sm:items-center sm:justify-between sm:p-8">
-          <div>
+        <header className="flex flex-col gap-5 rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:p-8 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-semibold tracking-[0.2em] text-sloth-moss uppercase">
               Hoje
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-sloth-ink sm:text-4xl">
-              Uma coisa de cada vez.
+              Uma coisa de cada vez
             </h1>
             <p className="mt-2 text-sm text-sloth-muted">
               {formatLongDate(todayDate)} · {email} · <span className="inline-flex items-center gap-1"><span className="text-sloth-leaf">🍃</span> {balance} Folhinhas</span>
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Link
-              className="inline-flex min-h-11 items-center rounded-2xl border border-sloth-border bg-sloth-card px-5 font-medium text-sloth-forest transition hover:bg-sloth-beige"
-              href="/timeline"
-            >
-              Linha do Tempo
-            </Link>
-            <Link
-              className="inline-flex min-h-11 items-center rounded-2xl border border-sloth-border bg-sloth-card px-5 font-medium text-sloth-forest transition hover:bg-sloth-beige"
-              href="/calendar"
-            >
-              Calendário
-            </Link>
-            <Link
-              className="inline-flex min-h-11 items-center rounded-2xl border border-sloth-border bg-sloth-card px-5 font-medium text-sloth-forest transition hover:bg-sloth-beige"
-              href="/rewards"
-            >
-              Loja de Recompensas
-            </Link>
-            <a
-              className="inline-flex min-h-11 items-center rounded-2xl bg-sloth-moss px-5 font-semibold text-white transition hover:bg-sloth-forest"
-              href="#nova-tarefa"
-            >
-              Nova tarefa
-            </a>
-            <form action={logout}>
-              <button
-                className="min-h-11 rounded-2xl border border-sloth-border bg-sloth-card px-5 font-medium text-sloth-forest transition hover:bg-sloth-beige"
-                type="submit"
-              >
-                Sair
-              </button>
-            </form>
-          </div>
+          <TopNavigation current="today" showNewTask />
         </header>
 
         {message ? (
@@ -435,7 +417,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             <p className="mt-2 text-sm text-sloth-muted">
               {isHeavyDay
                 ? "Seu dia parece acima da carga ideal."
-                : "Somente tarefas abertas com prazo hoje."}
+                : "Tarefas abertas previstas para hoje."}
             </p>
           </article>
 
@@ -448,8 +430,8 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             </p>
             <p className="mt-2 text-sm text-sloth-muted">
               {groups.today.length === 0
-                ? "O espaço de hoje está livre."
-                : "Passos que pedem atenção agora."}
+                ? "O espaço de hoje está livre"
+                : "Passos que pedem atenção agora"}
             </p>
           </article>
 
@@ -462,8 +444,8 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             </p>
             <p className="mt-2 text-sm text-sloth-muted">
               {criticalToday > 0
-                ? "Vale começar por aqui, sem pressa."
-                : "Nenhuma tarefa crítica para hoje."}
+                ? "Vale começar por aqui, sem pressa"
+                : "Nenhuma tarefa crítica para hoje"}
             </p>
           </article>
         </section>
@@ -472,10 +454,10 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
           <TaskSection
             categories={categories}
             categoriesById={categoriesById}
-            description="Prazos que passaram e ainda estão abertos."
+            description="Prazos que passaram e ainda estão abertos"
             emptyMessage="Nada atrasado. O dia começa mais leve."
             isOverdue
-            label="Atenção gentil"
+            label="Atenção!"
             tasks={groups.overdue}
             title="Tarefas atrasadas"
           />
@@ -483,8 +465,8 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
           <TaskSection
             categories={categories}
             categoriesById={categoriesById}
-            description="O que tem prazo para o dia de hoje."
-            emptyMessage="Nenhuma tarefa com prazo hoje."
+            description="Tarefas previstas para hoje, inclusive as que atravessam mais de um dia."
+            emptyMessage="Nenhuma tarefa prevista para hoje."
             label="Agora"
             tasks={groups.today}
             title="Tarefas de hoje"
