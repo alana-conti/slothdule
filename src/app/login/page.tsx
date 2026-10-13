@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/api/server";
 
 import { login, signUp } from "./actions";
 
@@ -13,10 +13,9 @@ type LoginPageProps = {
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const user = await getCurrentUser();
 
-  if (data?.claims) {
+  if (user) {
     redirect("/today");
   }
 

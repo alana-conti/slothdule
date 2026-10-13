@@ -20,21 +20,22 @@ Reduzir acúmulo de demandas, esquecimento e priorização incorreta por meio de
 - loja de recompensas afetivas;
 - base preparada para futuras integrações com Google Calendar, Telegram, WhatsApp e IA generativa.
 
-## Stack recomendada
+## Stack
 
 - **Frontend/PWA:** Next.js + TypeScript
 - **Estilo:** Tailwind CSS
-- **Backend/Banco:** Supabase/Postgres
-- **Autenticação:** Supabase Auth
-- **Arquivos:** Supabase Storage
-- **Deploy:** Vercel
-- **Repositório:** GitHub
+- **Backend:** FastAPI (Python) em `backend/`
+- **Banco:** Postgres 17 (Docker, mesma VPS)
+- **Autenticação:** email+senha com JWT em cookies httpOnly (tabela `users` própria)
+- **Arquivos:** disco local servido pela API (`/files/...`, 10 MB, mesmos mimes de antes)
+- **Deploy:** `docker-compose.yml` (api + db + Caddy com TLS) na VPS; frontend onde preferir
 - **Assistência de desenvolvimento:** Codex
 
 ## Requisitos
 
 - Node.js 20.9 ou superior.
 - npm 10 ou superior.
+- Python 3.12+ e Docker (para o backend).
 
 ## Instalação
 
@@ -48,13 +49,30 @@ e preencha apenas com valores do seu ambiente. Nunca versione o arquivo
 
 ## Como rodar
 
-Para iniciar o ambiente de desenvolvimento:
-
 ```bash
-npm run dev
+make setup   # primeira vez: npm install + venv Python + deps do backend + hooks git
+make dev     # sobe db + api + web com hot reload (http://localhost:3000)
 ```
 
-Abra [http://localhost:3000](http://localhost:3000) no navegador.
+O `make setup` instala hooks do lefthook: ESLint com `--fix` no pre-commit e
+(`typecheck` + testes frontend e backend) no pre-push. O CI roda tudo de novo
+como garantia — hooks locais são burláveis com `--no-verify`.
+
+O `make dev` usa `docker-compose.yml` + `docker-compose.dev.yml`.
+Detalhes das portas e senhas locais estão no `.env` (gitignorado).
+
+Outros atalhos (`make help` lista todos):
+
+```bash
+make test          # pytest (backend) + vitest (frontend)
+make lint          # ESLint
+make typecheck     # tsc --noEmit
+make migrate       # alembic upgrade head no banco da stack
+make db-shell      # psql no banco da stack
+make backup        # dump do banco + tar dos anexos em ./backups
+make down          # para a stack (mantém dados)
+make clean         # para tudo e APAGA banco + arquivos
+```
 
 Para validar o projeto:
 

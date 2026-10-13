@@ -1,0 +1,21 @@
+# Hooks git locais (gerenciados pelo lefthook, instalado via `make setup`).
+#
+# Filosofia: feedback rápido na máquina, CI como garantia final.
+# - pre-commit → só o rápido (ESLint com --fix nos arquivos staged).
+# - pre-push    → o pesado (typecheck + suítes frontend e backend).
+# - CI          → roda tudo de novo (hooks são burláveis com --no-verify).
+
+pre-commit:
+  commands:
+    eslint:
+      glob: "*.{js,jsx,ts,tsx}"
+      run: npx eslint --fix {staged_files}
+
+pre-push:
+  commands:
+    typecheck:
+      run: npm run typecheck
+    frontend-tests:
+      run: npx vitest run
+    backend-tests:
+      run: make test-backend

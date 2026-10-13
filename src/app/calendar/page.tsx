@@ -3,19 +3,17 @@ import { redirect } from "next/navigation";
 import { TopNavigation } from "@/components/sloth/top-navigation";
 import { listTasks } from "@/features/tasks/data";
 import { CalendarView } from "@/components/calendar/calendar-view";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/api/server";
 
 export default async function CalendarPage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const user = await getCurrentUser();
 
-  if (!data?.claims) {
+  if (!user) {
     redirect("/login");
   }
 
   const tasks = await listTasks();
-  const email =
-    typeof data.claims.email === "string" ? data.claims.email : "sua conta";
+  const email = user.email || "sua conta";
 
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">

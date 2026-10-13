@@ -11,7 +11,7 @@ import {
   markRewardRedemptionDeliveredAction,
   redeemRewardAction,
 } from "@/features/tasks/actions";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/api/server";
 import type { RewardRedemptionStatus } from "@/types/tasks";
 
 type RewardsPageProps = {
@@ -22,10 +22,9 @@ type RewardsPageProps = {
 };
 
 export default async function RewardsPage({ searchParams }: RewardsPageProps) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const user = await getCurrentUser();
 
-  if (!data?.claims) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -36,8 +35,7 @@ export default async function RewardsPage({ searchParams }: RewardsPageProps) {
     listRewardRedemptions(),
   ]);
 
-  const email =
-    typeof data.claims.email === "string" ? data.claims.email : "sua conta";
+  const email = user.email || "sua conta";
 
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">

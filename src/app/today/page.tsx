@@ -21,7 +21,7 @@ import {
   groupTasksForToday,
 } from "@/features/tasks/today";
 import { calculatePriorityScore } from "@/lib/priority";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/api/server";
 import type { Category, Task, TaskPriority, TaskStatus } from "@/types/tasks";
 
 import { PwaNotificationManager } from "@/components/sloth/pwa-notification-manager";
@@ -327,10 +327,9 @@ function TaskSection({
 }
 
 export default async function TodayPage({ searchParams }: TodayPageProps) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const user = await getCurrentUser();
 
-  if (!data?.claims) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -341,8 +340,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
     getUserLeafBalance(),
   ]);
 
-  const email =
-    typeof data.claims.email === "string" ? data.claims.email : "sua conta";
+  const email = user.email || "sua conta";
   const todayDate = getTodayDateKey();
   const groups = groupTasksForToday(tasks, todayDate);
   const dailyMinutes = getDailyEstimatedMinutes(groups.today);

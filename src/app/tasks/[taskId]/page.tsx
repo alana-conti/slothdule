@@ -7,7 +7,7 @@ import { ReminderList } from "@/features/tasks/reminder-list";
 import { AttachmentList } from "@/features/tasks/attachment-list";
 import { DeleteTaskControl } from "@/features/tasks/delete-task-control";
 import { TaskStatusControl } from "@/features/tasks/task-status-control";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/api/server";
 import type { TaskPriority, TaskStatus } from "@/types/tasks";
 
 const priorityLabels: Record<TaskPriority, string> = {
@@ -48,10 +48,9 @@ export default async function TaskDetailPage({
   params,
   searchParams,
 }: TaskDetailPageProps) {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const user = await getCurrentUser();
 
-  if (!data?.claims) {
+  if (!user) {
     redirect("/login");
   }
 

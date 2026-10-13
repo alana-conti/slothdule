@@ -3,8 +3,7 @@
 import { useMemo, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 
-import { createFileAttachmentAction } from "@/features/tasks/attachment-actions";
-import { createClient } from "@/lib/supabase/client";
+import { uploadAttachmentFile } from "@/lib/api/client";
 
 type FileUploaderProps = {
   taskId: string;
@@ -22,32 +21,7 @@ const allowedMimeTypes = new Set([
   "text/csv",
 ]);
 
-const extensionByMimeType: Record<string, string> = {
-  "application/pdf": "pdf",
-  "application/msword": "doc",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-    "docx",
-  "application/vnd.ms-excel": "xls",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-  "application/vnd.ms-powerpoint": "ppt",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-    "pptx",
-  "text/plain": "txt",
-  "text/csv": "csv",
-};
-
 const maxFileSizeBytes = 10 * 1024 * 1024;
-
-function getSafeExtension(file: File) {
-  const mimeExtension = extensionByMimeType[file.type];
-
-  if (mimeExtension) {
-    return mimeExtension;
-  }
-
-  const extension = file.name.split(".").pop()?.toLowerCase();
-  return extension?.replace(/[^a-z0-9]/g, "") || "file";
-}
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) {
@@ -109,59 +83,7 @@ export function FileUploader({ taskId }: FileUploaderProps) {
       setIsUploading(true);
       setUploadError(null);
 
-      const supabase = createClient();
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        throw new Error(
-          "Sua sessão expirou. Entre novamente para anexar o documento.",
-        );
-      }
-
-      const contentType = file.type || "application/octet-stream";
-      const extension = getSafeExtension(file);
-      const fileName = `${user.id}/${taskId}/${crypto.randomUUID()}.${extension}`;
-
-      const { error: uploadErr } = await supabase.storage
-        .from("attachments")
-        .upload(fileName, file, {
-          contentType,
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadErr) {
-        if (uploadErr.message.toLowerCase().includes("bucket not found")) {
-          throw new Error(
-            "O armazenamento de anexos ainda não foi configurado. Aplique as migrations do Supabase.",
-          );
-        }
-
-        throw new Error(
-          `Não foi possível enviar o documento: ${uploadErr.message}`,
-        );
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("attachments").getPublicUrl(fileName);
-
-      const formData = new FormData();
-      formData.append("taskId", taskId);
-      formData.append("url", publicUrl);
-      formData.append("label", label || file.name);
-      formData.append("mimeType", contentType);
-      formData.append("sizeBytes", String(file.size));
-
-      const result = await createFileAttachmentAction(formData);
-
-      if (result.error) {
-        await supabase.storage.from("attachments").remove([fileName]);
-        throw new Error(result.error);
-      }
+      await uploadAttachmentFile(taskId, file, label || file.name);
 
       setFile(null);
       setLabel("");

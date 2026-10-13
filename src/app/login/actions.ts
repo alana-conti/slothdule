@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server";
+import { apiFetch } from "@/lib/api/server";
 
 function getRequiredField(formData: FormData, field: string) {
   const value = formData.get(field);
@@ -11,16 +11,11 @@ function getRequiredField(formData: FormData, field: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function getLoginErrorMessage(code?: string) {
-  if (code === "invalid_credentials") {
-    return "E-mail ou senha incorretos. Confira os dados e tente novamente.";
-  }
+async function readErrorDetail(response: Response) {
+  const body = await response.json().catch(() => null);
+  const detail = typeof body?.detail === "string" ? body.detail : null;
 
-  if (code === "email_not_confirmed") {
-    return "Confirme seu e-mail antes de entrar.";
-  }
-
-  return "Não foi possível entrar agora. Respire e tente novamente em instantes.";
+  return detail;
 }
 
 export async function login(formData: FormData) {
@@ -31,14 +26,16 @@ export async function login(formData: FormData) {
     redirect("/login?error=Preencha%20seu%20e-mail%20e%20sua%20senha.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+  const response = await apiFetch("/auth/login", {
+    body: JSON.stringify({ email, password }),
+    method: "POST",
   });
 
-  if (error) {
-    const message = getLoginErrorMessage(error.code);
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    const message =
+      detail ||
+      "Não foi possível entrar agora. Respire e tente novamente em instantes.";
     redirect(`/login?error=${encodeURIComponent(message)}`);
   }
 
@@ -47,9 +44,7 @@ export async function login(formData: FormData) {
 }
 
 export async function logout() {
-  const supabase = await createClient();
-
-  await supabase.auth.signOut();
+  await apiFetch("/auth/logout", { method: "POST" });
   revalidatePath("/", "layout");
   redirect("/login");
 }
@@ -62,14 +57,16 @@ export async function signUp(formData: FormData) {
     redirect("/login?error=Preencha%20seu%20e-mail%20e%20sua%20senha.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
+  const response = await apiFetch("/auth/signup", {
+    body: JSON.stringify({ email, password }),
+    method: "POST",
   });
 
-  if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  if (!response.ok) {
+    const detail = await readErrorDetail(response);
+    redirect(
+      `/login?error=${encodeURIComponent(detail || "Não foi possível criar a conta.")}`,
+    );
   }
 
   redirect("/login?message=Conta%20criada!%20Agora%20você%20pode%20entrar%20com%20calma.");

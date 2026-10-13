@@ -1,0 +1,75 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-slothdule}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-slothdule}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-slothdule}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-slothdule}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-slothdule}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
+      DATA_DIR: /data
+      MAX_UPLOAD_MB: 10
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://seu-dominio}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+    volumes:
+      - filedata:/data
+    ports:
+      - "${API_PORT:-8000}:8000"
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      # Server Components / Server Actions falam com a API pela rede interna.
+      BACKEND_URL: http://api:8000
+      PORT: "3000"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_HOST: ${SITE_HOST:?defina SITE_HOST}
+      API_HOST: ${API_HOST:?defina API_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  filedata:
+  caddy_data:
+  caddy_config:

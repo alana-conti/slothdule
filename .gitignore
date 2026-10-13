@@ -11,6 +11,7 @@
 # Local environment files
 .env
 .env.local
+backend/.env
 .env.development.local
 .env.test.local
 .env.production.local
@@ -28,3 +29,10 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Backend próprio (FastAPI + Postgres)
+.venv-backend/
+backend/.venv/
+data/
+backups/
+__pycache__/

@@ -3,13 +3,12 @@ import { redirect } from "next/navigation";
 import { TopNavigation } from "@/components/sloth/top-navigation";
 import { listTasks, listCategories, listClients, listProjects, getUserLeafBalance } from "@/features/tasks/data";
 import { TimelineView } from "@/components/timeline/timeline-view";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/api/server";
 
 export default async function TimelinePage() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const user = await getCurrentUser();
 
-  if (!data?.claims) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -21,7 +20,7 @@ export default async function TimelinePage() {
     getUserLeafBalance(),
   ]);
 
-  const email = typeof data.claims.email === "string" ? data.claims.email : "sua conta";
+  const email = user.email || "sua conta";
 
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">

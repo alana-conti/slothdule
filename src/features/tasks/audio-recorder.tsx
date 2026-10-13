@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { createAudioAttachmentAction } from "@/features/tasks/attachment-actions";
+import { uploadAttachmentFile } from "@/lib/api/client";
 
 type AudioRecorderProps = {
   taskId: string;
@@ -135,16 +134,6 @@ export function AudioRecorder({ taskId }: AudioRecorderProps) {
       setIsUploading(true);
       setUploadError(null);
 
-      const supabase = createClient();
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        throw new Error("Sua sessão expirou. Entre novamente para salvar o áudio.");
-      }
-
       const contentType = (audioBlob.type || "audio/webm").split(";")[0];
       const extension =
         contentType === "audio/mp4"
@@ -154,46 +143,13 @@ export function AudioRecorder({ taskId }: AudioRecorderProps) {
             : contentType === "audio/mpeg"
               ? "mp3"
               : "webm";
-      const fileName = `${user.id}/${taskId}/${crypto.randomUUID()}.${extension}`;
-      
-      // Upload blob to Supabase Storage
-      const { error: uploadErr } = await supabase.storage
-        .from("attachments")
-        .upload(fileName, audioBlob, {
-          contentType,
-          cacheControl: "3600",
-          upsert: false,
-        });
 
-      if (uploadErr) {
-        if (uploadErr.message.toLowerCase().includes("bucket not found")) {
-          throw new Error(
-            "O armazenamento de áudio ainda não foi configurado. Aplique as migrations do Supabase.",
-          );
-        }
-
-        throw new Error(`Não foi possível enviar o áudio: ${uploadErr.message}`);
-      }
-
-      // Fetch public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("attachments")
-        .getPublicUrl(fileName);
-
-      // Trigger server action to register attachment in DB
-      const formData = new FormData();
-      formData.append("taskId", taskId);
-      formData.append("url", publicUrl);
-      formData.append("label", label || "Gravação de Áudio");
-      formData.append("mimeType", contentType);
-      formData.append("sizeBytes", String(audioBlob.size));
-
-      const result = await createAudioAttachmentAction(formData);
-
-      if (result.error) {
-        await supabase.storage.from("attachments").remove([fileName]);
-        throw new Error(result.error);
-      }
+      await uploadAttachmentFile(
+        taskId,
+        audioBlob,
+        label || "Gravação de Áudio",
+        `gravacao.${extension}`,
+      );
 
       // Reset state
       setAudioBlob(null);

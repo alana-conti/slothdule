@@ -1,0 +1,63 @@
+# Slothdule — atalhos do dia a dia.
+# `make help` lista tudo. Produção (`make prod`) ainda não existe de propósito.
+
+COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
+PY := $(if $(wildcard .venv-backend/bin/python),.venv-backend/bin/python,python3)
+TEST_DB_URL := postgresql+psycopg://slothdule:slothdule@localhost:5434/slothdule_test
+
+.PHONY: help setup dev down logs ps build test test-backend test-frontend lint typecheck migrate db-shell backup clean
+
+help: ## Lista os comandos disponíveis
+	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
+
+setup: ## Instala dependências do frontend e do backend + hooks git
+	npm install
+	python3 -m venv .venv-backend
+	.venv-backend/bin/pip install -r backend/requirements.txt
+	command -v lefthook >/dev/null || brew install lefthook
+	lefthook install
+
+dev: ## Sobe tudo em modo dev (db + api + web com hot reload)
+	$(COMPOSE_DEV) up db api web
+
+down: ## Para a stack de dev (mantém banco e arquivos)
+	$(COMPOSE_DEV) down
+
+logs: ## Segue logs (use S=api|web|db para filtrar, ex.: make logs S=api)
+	$(COMPOSE_DEV) logs -f $(S)
+
+ps: ## Mostra o estado dos containers
+	$(COMPOSE_DEV) ps
+
+build: ## Builda as imagens docker (api + web)
+	docker compose build
+
+test: test-backend test-frontend ## Roda toda a suíte (backend + frontend)
+
+test-backend: ## Pytest contra um Postgres efêmero na porta 5434
+	@docker start slothdule-test-postgres 2>/dev/null || docker run -d --name slothdule-test-postgres -e POSTGRES_USER=slothdule -e POSTGRES_PASSWORD=slothdule -p 5434:5432 postgres:17-alpine
+	@until docker exec slothdule-test-postgres pg_isready -U slothdule >/dev/null 2>&1; do sleep 1; done
+	@docker exec slothdule-test-postgres psql -U slothdule -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='slothdule_test'" | grep -q 1 || docker exec slothdule-test-postgres psql -U slothdule -d postgres -c "CREATE DATABASE slothdule_test" >/dev/null
+	@TEST_DATABASE_URL="$(TEST_DB_URL)" JWT_SECRET=test-secret DATA_DIR=/tmp/slothdule-test-data $(PY) -m pytest backend/tests
+
+test-frontend: ## Vitest (unitários do frontend)
+	npx vitest run
+
+lint: ## ESLint do frontend
+	npm run lint
+
+typecheck: ## tsc --noEmit do frontend
+	npm run typecheck
+
+migrate: ## Aplica migrações Alembic no banco da stack (precisa do `api` no ar)
+	docker compose exec api alembic upgrade head
+
+db-shell: ## Abre psql no banco da stack
+	docker compose exec db psql -U slothdule -d slothdule
+
+backup: ## Backup do banco + anexos (DEST=./backups por padrão)
+	./scripts/backup.sh $(or $(DEST),./backups)
+
+clean: ## Para tudo e APAGA volumes (banco + arquivos) e o Postgres de teste
+	$(COMPOSE_DEV) down -v
+	@docker rm -f slothdule-test-postgres 2>/dev/null || true

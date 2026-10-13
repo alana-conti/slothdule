@@ -23,6 +23,8 @@ Use TypeScript and four-space indentation, matching the existing source. Prefer 
 
 Use Vitest for unit tests. Name tests after the module they cover, e.g. `src/lib/priority/priority.test.ts`, and describe observable behavior, boundary cases, and regressions. Add or update tests whenever changing priority, reward, task, or notification logic. There is no enforced coverage threshold; aim for meaningful coverage of business rules.
 
+Backend API tests live in `backend/tests/` (pytest + FastAPI TestClient, run with `make test-backend`). Convention: one `test_<router>.py` per module in `backend/app/routers/`, shared fixtures in `conftest.py` (`client`, `user_client`, `second_user_client`), shared HTTP builders in `helpers.py`, and cross-user isolation proof in `test_isolation.py`. Always test through HTTP (never call router functions directly); cover happy path, validation errors (400/422), 401 without session, and 404 on other users' data.
+
 ## Database, Configuration, and Security
 
 Never commit `.env.local`, keys, tokens, or passwords; use `.env.example` for variable names. Preserve Supabase Row Level Security and ensure policies scope user data with `auth.uid()`. Read the relevant files in `docs/` and existing migration history before changing schema or product behavior.
