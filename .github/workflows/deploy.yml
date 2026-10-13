@@ -1,0 +1,94 @@
+# Deploy: builda, publica no GHCR e atualiza a VPS.
+# Roda só quando o workflow CI termina VERDE na main.
+#
+# Imagens (visibilidade herdada do repo; pulls autenticados na VPS):
+#   ghcr.io/<owner>/slothdule:api-<sha>  / :api-latest
+#   ghcr.io/<owner>/slothdule:web-<sha>  / :web-latest
+# O deploy fixa as tags por sha (rollback = apontar o compose p/ tag anterior).
+# Auth usa o GITHUB_TOKEN automático — nenhum secret de registry necessário.
+#
+# Secrets necessários (Settings → Secrets → Actions):
+#   PUBLIC_API_URL  (ex.: https://api.seudominio.com — embutida no build do front)
+#   SSH_HOST / SSH_USER / SSH_KEY (acesso à VPS)
+#   DEPLOY_DIR      (ex.: /opt/slothdule — repo já clonado na VPS, branch main)
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  build-push:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      repo: ${{ steps.tags.outputs.repo }}
+      api_image: ${{ steps.tags.outputs.api_image }}
+      web_image: ${{ steps.tags.outputs.web_image }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: tags
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          SHORT="${SHA:0:7}"
+          # GHCR exige namespace em minúsculas.
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          REPO="ghcr.io/${OWNER}/slothdule"
+          echo "repo=${REPO}" >> "$GITHUB_OUTPUT"
+          echo "api_image=${REPO}:api-${SHORT}" >> "$GITHUB_OUTPUT"
+          echo "web_image=${REPO}:web-${SHORT}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.api_image }}
+            ${{ steps.tags.outputs.repo }}:api-latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.web
+          target: runner
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.web_image }}
+            ${{ steps.tags.outputs.repo }}:web-latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.PUBLIC_API_URL }}
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    env:
+      DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+      GHCR_USER: ${{ github.actor }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      API_IMAGE: ${{ needs.build-push.outputs.api_image }}
+      WEB_IMAGE: ${{ needs.build-push.outputs.web_image }}
+    steps:
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: DEPLOY_DIR,GHCR_USER,GHCR_TOKEN,API_IMAGE,WEB_IMAGE
+          script: |
+            cd "$DEPLOY_DIR"
+            git pull --ff-only origin main
+            export API_IMAGE WEB_IMAGE GHCR_USER GHCR_TOKEN
+            ./scripts/deploy.sh

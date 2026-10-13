@@ -1,0 +1,58 @@
+# CI: portões que todo push/PR precisa passar.
+# Espelha os hooks locais (lefthook.yml); o CI é a garantia final porque
+# hooks são burláveis com --no-verify. O deploy vive em deploy.yml e só
+# roda quando este workflow termina verde na main.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx vitest run
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - run: make test-backend
+
+  docker:
+    # Valida os Dockerfiles (build sem push) em todo PR e push.
+    needs: [frontend, backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.web
+          target: runner
+          push: false
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://localhost:8000

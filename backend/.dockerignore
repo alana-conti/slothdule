@@ -1,0 +1,6 @@
+# Contexto de build da API (backend/Dockerfile, context: ./backend).
+__pycache__
+*.pyc
+.venv
+tests
+alembic/versions/__pycache__

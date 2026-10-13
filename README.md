@@ -28,7 +28,7 @@ Reduzir acúmulo de demandas, esquecimento e priorização incorreta por meio de
 - **Banco:** Postgres 17 (Docker, mesma VPS)
 - **Autenticação:** email+senha com JWT em cookies httpOnly (tabela `users` própria)
 - **Arquivos:** disco local servido pela API (`/files/...`, 10 MB, mesmos mimes de antes)
-- **Deploy:** `docker-compose.yml` (api + db + Caddy com TLS) na VPS; frontend onde preferir
+- **Deploy:** `docker-compose.yml` (api + web + db) na VPS atrás do nginx local
 - **Assistência de desenvolvimento:** Codex
 
 ## Requisitos
@@ -87,6 +87,89 @@ Para executar a versão de produção após o build:
 ```bash
 npm run start
 ```
+
+## Deploy (CI/CD)
+
+Fluxo: push na `main` → workflow **CI** (lint, typecheck, testes, build das
+imagens) → workflow **Deploy** (publica no GHCR e atualiza a VPS via SSH).
+
+As imagens vão para o GitHub Container Registry, com a visibilidade do repo:
+
+- `ghcr.io/<owner>/slothdule:api-<sha>` e `:api-latest`
+- `ghcr.io/<owner>/slothdule:web-<sha>` e `:web-latest`
+
+Autenticação via `GITHUB_TOKEN` automático — nenhum secret de registry. O deploy
+fixa as tags por sha (rollback = apontar o compose para a tag anterior).
+Migrations rodam sozinhas no start do container `api`.
+
+### Secrets (GitHub → Settings → Secrets → Actions)
+
+| Secret | Exemplo | Uso |
+|---|---|---|
+| `PUBLIC_API_URL` | `https://api.seudominio.com` | embutida no build do front (`NEXT_PUBLIC_*` congela no build) |
+| `SSH_HOST` / `SSH_USER` / `SSH_KEY` | `1.2.3.4` / `root` / chave privada | acesso à VPS |
+| `DEPLOY_DIR` | `/opt/slothdule` | repo já clonado na VPS, branch `main` |
+
+### Preparar a VPS (uma vez)
+
+```bash
+git clone <repo> /opt/slothdule && cd /opt/slothdule
+cp .env.prod.example .env   # preencher senhas, domínios e portas
+docker compose up -d        # db + api + web (o nginx da VPS faz o TLS e o proxy)
+# backup diário (cron): 0 3 * * * /opt/slothdule/scripts/backup.sh /var/backups/slothdule
+```
+
+### Deploy manual e rollback (`make prod`)
+
+O CI faz deploy sozinho, mas dá para atualizar (ou reverter) à mão — o
+procedimento é o mesmo nos dois casos (`scripts/deploy.sh`):
+
+```bash
+export SSH_HOST=1.2.3.4 SSH_USER=root SSH_KEY_FILE=~/.ssh/slothdule-deploy
+export DEPLOY_DIR=/opt/slothdule GHCR_OWNER=alana-conti
+export GHCR_USER=alana-conti GHCR_TOKEN=<token-com-read-packages>
+
+make prod                              # sobe as tags :latest
+make prod API_TAG=abc1234 WEB_TAG=abc1234   # pina versão (ou faz rollback)
+```
+
+`GHCR_TOKEN` pode ser um token de acesso com permissão de leitura nos pacotes;
+sem ele, o `pull` de imagens privadas falha.
+
+### nginx na VPS (proxy + TLS centralizado)
+
+O compose não expõe 80/443 — o nginx da VPS recebe tudo e repassa para
+`127.0.0.1:3000` (front) e `127.0.0.1:8000` (API). O `client_max_body_size` é
+obrigatório: o default do nginx (1 MB) barraria os anexos de até 10 MB.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name api.seu-dominio;
+    client_max_body_size 12m;
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name app.seu-dominio;
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+(Certificados via certbot; ajuste as portas se `API_PORT`/`WEB_PORT` estiverem
+definidas no `.env` da VPS.)
 
 ## Estrutura sugerida
 

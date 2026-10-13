@@ -1,11 +1,25 @@
 # Slothdule — atalhos do dia a dia.
-# `make help` lista tudo. Produção (`make prod`) ainda não existe de propósito.
+# `make help` lista tudo.
+#
+# Produção (`make prod`): SSH_HOST, SSH_USER, SSH_KEY_FILE e DEPLOY_DIR no
+# ambiente; GHCR_OWNER obrigatório; API_TAG/WEB_TAG pinam a versão
+# (default: latest). GHCR_USER/GHCR_TOKEN p/ pulls privados.
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 PY := $(if $(wildcard .venv-backend/bin/python),.venv-backend/bin/python,python3)
 TEST_DB_URL := postgresql+psycopg://slothdule:slothdule@localhost:5434/slothdule_test
+GHCR_OWNER ?= $(error defina GHCR_OWNER=owner-do-github)
+API_TAG ?= latest
+WEB_TAG ?= latest
 
-.PHONY: help setup dev down logs ps build test test-backend test-frontend lint typecheck migrate db-shell backup clean
+.PHONY: help setup dev down logs ps build test test-backend test-frontend lint typecheck migrate db-shell backup clean prod
+
+prod: ## Atualiza a VPS com as imagens do GHCR (API_TAG/WEB_TAG pinam versão)
+	ssh -i "$(SSH_KEY_FILE)" "$(SSH_USER)@$(SSH_HOST)" \
+		"cd '$(DEPLOY_DIR)' && git pull --ff-only origin main && \
+		API_IMAGE='ghcr.io/$(GHCR_OWNER)/slothdule:api-$(API_TAG)' \
+		WEB_IMAGE='ghcr.io/$(GHCR_OWNER)/slothdule:web-$(WEB_TAG)' \
+		GHCR_USER='$(GHCR_USER)' GHCR_TOKEN='$(GHCR_TOKEN)' ./scripts/deploy.sh"
 
 help: ## Lista os comandos disponíveis
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'

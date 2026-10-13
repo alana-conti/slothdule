@@ -15,6 +15,10 @@ services:
       retries: 5
 
   api:
+    # Em produção (deploy via CI), API_IMAGE aponta para o GHCR
+    # (ex.: ghcr.io/owner/slothdule:api-abc1234) e o `compose pull` baixa a imagem.
+    # Local, o default mantém o comportamento atual (build local).
+    image: ${API_IMAGE:-slothdule-api}
     build: ./backend
     restart: unless-stopped
     depends_on:
@@ -35,6 +39,8 @@ services:
       - "8000"
 
   web:
+    # Mesmo esquema da api: WEB_IMAGE aponta para o GHCR em produção.
+    image: ${WEB_IMAGE:-slothdule-web}
     build:
       context: .
       dockerfile: Dockerfile.web
@@ -51,25 +57,6 @@ services:
     ports:
       - "${WEB_PORT:-3000}:3000"
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on:
-      - api
-      - web
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      SITE_HOST: ${SITE_HOST:?defina SITE_HOST}
-      API_HOST: ${API_HOST:?defina API_HOST}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-
 volumes:
   pgdata:
   filedata:
-  caddy_data:
-  caddy_config:
