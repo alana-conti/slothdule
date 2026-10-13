@@ -7,7 +7,8 @@
 
 COMPOSE_DEV := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 PY := $(if $(wildcard .venv-backend/bin/python),.venv-backend/bin/python,python3)
-TEST_DB_URL := postgresql+psycopg://slothdule:slothdule@localhost:5434/slothdule_test
+TEST_DB_URL ?= postgresql+psycopg://slothdule:slothdule@localhost:5434/slothdule_test
+TEST_PG := slothdule-test-postgres
 GHCR_OWNER ?= $(error defina GHCR_OWNER=owner-do-github)
 API_TAG ?= latest
 WEB_TAG ?= latest
@@ -48,11 +49,13 @@ build: ## Builda as imagens docker (api + web)
 
 test: test-backend test-frontend ## Roda toda a suíte (backend + frontend)
 
-test-backend: ## Pytest contra um Postgres efêmero na porta 5434
-	@docker start slothdule-test-postgres 2>/dev/null || docker run -d --name slothdule-test-postgres -e POSTGRES_USER=slothdule -e POSTGRES_PASSWORD=slothdule -p 5434:5432 postgres:17-alpine
-	@until docker exec slothdule-test-postgres pg_isready -U slothdule >/dev/null 2>&1; do sleep 1; done
-	@docker exec slothdule-test-postgres psql -U slothdule -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='slothdule_test'" | grep -q 1 || docker exec slothdule-test-postgres psql -U slothdule -d postgres -c "CREATE DATABASE slothdule_test" >/dev/null
-	@TEST_DATABASE_URL="$(TEST_DB_URL)" JWT_SECRET=test-secret DATA_DIR=/tmp/slothdule-test-data $(PY) -m pytest backend/tests
+test-backend: ## Pytest contra Postgres (local: container efêmero na 5434; CI: service do workflow via TEST_DATABASE_URL)
+ifndef TEST_DATABASE_URL
+	@docker start $(TEST_PG) 2>/dev/null || docker run -d --name $(TEST_PG) -e POSTGRES_USER=slothdule -e POSTGRES_PASSWORD=slothdule -p 5434:5432 postgres:17-alpine
+	@i=0; until docker exec $(TEST_PG) psql -U slothdule -d postgres -tc "SELECT 1" 2>/dev/null | grep -q 1; do i=$$((i+1)); if [ $$i -ge 90 ]; then echo "postgres de teste não respondeu em 90s"; docker logs --tail 20 $(TEST_PG); exit 1; fi; sleep 1; done
+	@docker exec $(TEST_PG) psql -U slothdule -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='slothdule_test'" | grep -q 1 || docker exec $(TEST_PG) psql -U slothdule -d postgres -c "CREATE DATABASE slothdule_test" >/dev/null
+endif
+	@TEST_DATABASE_URL="$(or $(TEST_DATABASE_URL),$(TEST_DB_URL))" JWT_SECRET=test-secret DATA_DIR=/tmp/slothdule-test-data $(PY) -m pytest backend/tests
 
 test-frontend: ## Vitest (unitários do frontend)
 	npx vitest run

@@ -29,6 +29,26 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
+    # Postgres real como sidecar (mesmo engine de produção — nada de sqlite).
+    # O runner só libera os steps quando o healthcheck passa, então não há
+    # corrida de startup: o `make test-backend` encontra o banco pronto via
+    # TEST_DATABASE_URL e pula o container efêmero local.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: slothdule
+          POSTGRES_PASSWORD: slothdule
+          POSTGRES_DB: slothdule_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U slothdule -d slothdule_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://slothdule:slothdule@localhost:5434/slothdule_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
