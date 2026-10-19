@@ -17,9 +17,20 @@ fi
 export API_IMAGE WEB_IMAGE
 docker compose pull api web
 docker compose up -d --no-build
-# Migrations rodam sozinhas no start do container api.
+# Migrations rodam sozinhas no start do container api (CMD: alembic && uvicorn),
+# então o /health pode demorar alguns segundos a mais que o `up`. Espera ativa.
 set -a; [ -f .env ] && . ./.env; set +a
-curl -fsS "http://localhost:${API_PORT:-8002}/health"
+i=0
+until curl -fsS "http://localhost:${API_PORT:-8002}/health" >/dev/null 2>&1; do
+    i=$((i+1))
+    if [ "$i" -ge 30 ]; then
+        echo "API não respondeu /health em 60s — logs recentes:"
+        docker compose logs --tail 50 api
+        exit 1
+    fi
+    sleep 2
+done
+echo "healthcheck OK: $(curl -fsS "http://localhost:${API_PORT:-8002}/health")"
 if [ -n "${GHCR_TOKEN:-}" ]; then
     docker logout ghcr.io
 fi
