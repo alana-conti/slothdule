@@ -21,7 +21,7 @@ const allowedMimeTypes = new Set([
   "text/csv",
 ]);
 
-const maxFileSizeBytes = 10 * 1024 * 1024;
+const maxFileSizeBytes = 20 * 1024 * 1024;
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) {
@@ -64,7 +64,7 @@ export function FileUploader({ taskId }: FileUploaderProps) {
     }
 
     if (selected.size > maxFileSizeBytes) {
-      setUploadError("O documento deve ter no máximo 10 MB.");
+      setUploadError("O documento deve ter no máximo 20 MB.");
       event.target.value = "";
       return;
     }
@@ -128,7 +128,7 @@ export function FileUploader({ taskId }: FileUploaderProps) {
             type="file"
           />
           <p className="mt-1.5 text-[11px] leading-relaxed text-sloth-muted">
-            Aceita PDF, Word, Excel, PowerPoint, TXT e CSV até 10 MB.
+            Aceita PDF, Word, Excel, PowerPoint, TXT e CSV até 20 MB.
           </p>
         </div>
 

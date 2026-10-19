@@ -27,7 +27,7 @@ Reduzir acúmulo de demandas, esquecimento e priorização incorreta por meio de
 - **Backend:** FastAPI (Python) em `backend/`
 - **Banco:** Postgres 17 (Docker, mesma VPS)
 - **Autenticação:** email+senha com JWT em cookies httpOnly (tabela `users` própria)
-- **Arquivos:** disco local servido pela API (`/files/...`, 10 MB, mesmos mimes de antes)
+- **Arquivos:** disco local servido pela API (`/files/...`, até 20 MB, mesmos mimes de antes)
 - **Deploy:** `docker-compose.yml` (api + web + db) na VPS atrás do nginx local
 - **Assistência de desenvolvimento:** Codex
 
@@ -115,6 +115,7 @@ Migrations rodam sozinhas no start do container `api`.
 ```bash
 git clone <repo> /opt/slothdule && cd /opt/slothdule
 cp .env.prod.example .env   # preencher senhas, domínios e portas
+docker network create proxy-net   # rede compartilhada com o nginx da VPS (uma vez)
 docker compose up -d        # db + api + web (o nginx da VPS faz o TLS e o proxy)
 # backup diário (cron): 0 3 * * * /opt/slothdule/scripts/backup.sh /var/backups/slothdule
 ```
@@ -140,13 +141,28 @@ sem ele, o `pull` de imagens privadas falha.
 
 O compose não expõe 80/443 — o nginx da VPS recebe tudo e repassa para
 `127.0.0.1:3000` (front) e `127.0.0.1:8002` (API). O `client_max_body_size` é
-obrigatório: o default do nginx (1 MB) barraria os anexos de até 10 MB.
+obrigatório: o default do nginx (1 MB) barraria os anexos de até 20 MB — use
+`20m`, sempre `>= MAX_UPLOAD_MB` do compose. A config de referência versionada
+está em [`deploy/nginx/slothdule.conf`](deploy/nginx/slothdule.conf).
+
+O compose conecta `api` e `web` à rede externa `proxy-net` (com os aliases
+`slothdule-api:8000` e `slothdule-web:3000`) — onde o nginx da VPS já roda.
+Se a rede não existir: `docker network create proxy-net`.
+
+Se a VPS usa o **Nginx Proxy Manager** (container), este arquivo não é lido
+diretamente — copie-o para `/data/nginx/custom/http.conf` dentro do container
+(incluído pelo NPM e nunca sobrescrito) e recarregue
+`docker exec <npm> nginx -t && nginx -s reload`. O NPM fica na rede
+`proxy-net`; use os aliases `slothdule-web:3000` e `slothdule-api:8000` como
+upstream e `client_max_body_size 20m` no vhost da API. Certificados: certbot
+webroot + um cron de renovação (o NPM só renova certificados que ele mesmo
+criou).
 
 ```nginx
 server {
     listen 443 ssl;
     server_name api.seu-dominio;
-    client_max_body_size 12m;
+    client_max_body_size 20m;
     location / {
         proxy_pass http://127.0.0.1:8002;
         proxy_set_header Host $host;

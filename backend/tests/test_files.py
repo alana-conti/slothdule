@@ -51,14 +51,26 @@ def test_upload_rejects_empty_file(user_client):
     assert r.status_code == 400
 
 
-def test_upload_rejects_file_over_10mb(user_client):
+def test_upload_accepts_file_between_10_and_20mb(user_client):
     task_id = make_task(user_client)["id"]
-    big = b"x" * (10 * 1024 * 1024 + 1)
+    content = b"x" * (15 * 1024 * 1024)
+    r = user_client.post(
+        f"/tasks/{task_id}/attachments/upload",
+        files={"file": ("grande.pdf", content, "application/pdf")},
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["size_bytes"] == len(content)
+
+
+def test_upload_rejects_file_over_20mb(user_client):
+    task_id = make_task(user_client)["id"]
+    big = b"x" * (20 * 1024 * 1024 + 1)
     r = user_client.post(
         f"/tasks/{task_id}/attachments/upload",
         files={"file": ("grande.pdf", big, "application/pdf")},
     )
     assert r.status_code == 400
+    assert "20 MB" in r.json()["detail"]
 
 
 def test_upload_on_other_users_task_fails(user_client, second_user_client):

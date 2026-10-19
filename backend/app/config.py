@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     access_ttl_seconds: int = 3600
     refresh_ttl_days: int = 30
     data_dir: str = "./data"
-    max_upload_mb: int = 10
+    max_upload_mb: int = 20
     cors_origins: str = "http://localhost:3000"
     cookie_secure: bool = False
     # Fase 7 (OAuth): preencher quando for implementar Google.

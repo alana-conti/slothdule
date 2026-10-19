@@ -81,7 +81,10 @@ async def upload_attachment(
         )
     content = await file.read()
     if len(content) > settings.max_upload_bytes:
-        raise HTTPException(status_code=400, detail="O arquivo deve ter no máximo 10 MB.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"O arquivo deve ter no máximo {settings.max_upload_mb} MB.",
+        )
     if not content:
         raise HTTPException(status_code=400, detail="Arquivo vazio.")
 
