@@ -19,7 +19,7 @@ docker compose pull api web
 docker compose up -d --no-build
 # Migrations rodam sozinhas no start do container api.
 set -a; [ -f .env ] && . ./.env; set +a
-curl -fsS "http://localhost:${API_PORT:-8000}/health"
+curl -fsS "http://localhost:${API_PORT:-8002}/health"
 if [ -n "${GHCR_TOKEN:-}" ]; then
     docker logout ghcr.io
 fi

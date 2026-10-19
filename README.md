@@ -139,7 +139,7 @@ sem ele, o `pull` de imagens privadas falha.
 ### nginx na VPS (proxy + TLS centralizado)
 
 O compose não expõe 80/443 — o nginx da VPS recebe tudo e repassa para
-`127.0.0.1:3000` (front) e `127.0.0.1:8000` (API). O `client_max_body_size` é
+`127.0.0.1:3000` (front) e `127.0.0.1:8002` (API). O `client_max_body_size` é
 obrigatório: o default do nginx (1 MB) barraria os anexos de até 10 MB.
 
 ```nginx
@@ -148,7 +148,7 @@ server {
     server_name api.seu-dominio;
     client_max_body_size 12m;
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8002;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

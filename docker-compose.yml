@@ -34,7 +34,7 @@ services:
     volumes:
       - filedata:/data
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_PORT:-8002}:8000"
     expose:
       - "8000"
 
