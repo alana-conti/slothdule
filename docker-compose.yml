@@ -29,11 +29,13 @@ services:
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
       DATA_DIR: /data
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://seu-dominio}
+      # Defaults de produção (domínio do projeto). Em dev, o /.env local
+      # sobrepõe com os valores localhost (ver .env.prod.example).
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://app.slothdule.guivi.tech}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       # Em prod, defina no .env (ver .env.prod.example). Sem ela o login
       # Google redireciona para o placeholder abaixo.
-      FRONTEND_URL: ${FRONTEND_URL:-https://seu-dominio}
+      FRONTEND_URL: ${FRONTEND_URL:-https://app.slothdule.guivi.tech}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
@@ -66,7 +68,7 @@ services:
       target: runner
       args:
         # Browser → API. Em deploy real, PUBLIC_API_URL é definido no CI/secret.
-        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:${API_PORT:-8002}}
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-https://api.slothdule.guivi.tech}
     restart: unless-stopped
     depends_on:
       - api
