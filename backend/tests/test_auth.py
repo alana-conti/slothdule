@@ -110,8 +110,36 @@ def test_routes_require_auth(client, method, path):
     assert r.status_code == 401, f"{method} {path} deveria exigir auth"
 
 
-# --- OAuth Google ---
+# --- GET /auth/lookup ---
 
+
+def test_lookup_reports_existing_account(client):
+    email = f"{unique('lookup')}@example.com"
+    assert client.post("/auth/signup", json={"email": email, "password": "secret123"}).status_code == 201
+    r = client.get(f"/auth/lookup?email={email}")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"exists": True}
+
+
+def test_lookup_reports_unknown_email(client):
+    r = client.get(f"/auth/lookup?email={unique('folha')}@example.com")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"exists": False}
+
+
+def test_lookup_is_case_insensitive(client):
+    email = f"{unique('caixa')}@example.com"
+    assert client.post("/auth/signup", json={"email": email, "password": "secret123"}).status_code == 201
+    r = client.get(f"/auth/lookup?email={email.upper()}")
+    assert r.json() == {"exists": True}
+
+
+def test_lookup_validates_email_and_needs_auth(client):
+    assert client.get("/auth/lookup?email=not-an-email").status_code == 422
+    assert client.get("/auth/lookup").status_code == 422
+
+
+# --- OAuth Google ---
 
 class _FakeGoogleClient:
     def __init__(self, token):
@@ -156,13 +184,21 @@ def google_env(monkeypatch):
     return fake
 
 
-def test_google_login_redirects_when_unconfigured(client):
+def test_google_login_redirects_when_unconfigured(client, monkeypatch):
+    from app import config
+
+    monkeypatch.setattr(config.settings, "google_client_id", "")
+    monkeypatch.setattr(config.settings, "google_client_secret", "")
     r = client.get("/auth/google/login", follow_redirects=False)
     assert r.status_code == 303
     assert "/login?error=" in r.headers["location"]
 
 
-def test_google_callback_redirects_when_unconfigured(client):
+def test_google_callback_redirects_when_unconfigured(client, monkeypatch):
+    from app import config
+
+    monkeypatch.setattr(config.settings, "google_client_id", "")
+    monkeypatch.setattr(config.settings, "google_client_secret", "")
     r = client.get("/auth/google/callback", follow_redirects=False)
     assert r.status_code == 303
     assert "/login?error=" in r.headers["location"]

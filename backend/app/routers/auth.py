@@ -4,6 +4,7 @@ from urllib.parse import quote
 from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
+from pydantic import EmailStr
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -110,6 +111,14 @@ def signup(payload: schemas.SignupIn, response: Response, db: Session = Depends(
         raise HTTPException(status_code=400, detail="Este e-mail já está em uso.")
     db.refresh(user)
     return user
+
+
+@router.get("/lookup")
+def lookup(email: EmailStr, db: Session = Depends(get_db)):
+    """Fluxo email-first: informa se já existe conta local para o e-mail."""
+    normalized = str(email).lower().strip()
+    user = db.query(models.User).filter(models.User.email == normalized).first()
+    return {"exists": user is not None}
 
 
 @router.post("/login", response_model=schemas.UserOut)

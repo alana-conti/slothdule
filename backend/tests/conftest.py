@@ -22,6 +22,11 @@ from sqlalchemy.orm import sessionmaker
 
 os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("DATA_DIR", "/tmp/slothdule-test-data")
+# Hermeticidade: testes de OAuth Google assumem client não configurado por
+# padrão (o .env do cwd pode ter credenciais reais). O google_env fixture
+# sobrescreve os settings quando precisa.
+os.environ["GOOGLE_CLIENT_ID"] = ""
+os.environ["GOOGLE_CLIENT_SECRET"] = ""
 
 from app.db import Base  # noqa: E402
 import app.models  # noqa: F401,E402
