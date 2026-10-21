@@ -6,8 +6,9 @@ services:
       target: dev
     command: npm run dev
     environment:
-      # No dev o Next roda dentro do container, mas o navegador está no host:
-      # o server usa a rede interna, o browser usa a URL pública do host.
+      # No dev o Next roda dentro do container, mas o navegador está no host.
+      # BACKEND_URL é a rede INTERNA do compose: a API escuta em 8000 no
+      # container (8002 é só o mapeamento pro host, ver API_PORT no .env).
       BACKEND_URL: http://api:8000
       NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8002}
     volumes:

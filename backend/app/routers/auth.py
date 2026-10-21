@@ -1,12 +1,16 @@
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from authlib.integrations.base_client.errors import OAuthError
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.config import settings
 from app.deps import get_current_user, get_db
+from app.oauth import oauth
 from app.security import (
     ACCESS_COOKIE,
     REFRESH_COOKIE,
@@ -21,6 +25,55 @@ from app.security import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 LOGIN_ERROR = "E-mail ou senha incorretos. Confira os dados e tente novamente."
+GOOGLE_OFF = "Login com o Google não está disponível. Entre com e-mail e senha."
+GOOGLE_FAILED = "Não foi possível concluir o login com o Google. Tente novamente."
+GOOGLE_LINK_REQUIRED = (
+    "Este e-mail já tem conta com senha. Para vincular o Google, entre com e-mail e senha."
+)
+
+
+def _redirect_login(message: str) -> RedirectResponse:
+    return RedirectResponse(
+        f"{settings.frontend_url}/login?error={quote(message)}", status_code=303
+    )
+
+
+def _resolve_google_user(
+    db: Session,
+    *,
+    sub: str,
+    email: str,
+    email_verified: bool,
+    display_name: str | None,
+    avatar_url: str | None,
+) -> models.User | None:
+    """Faz upsert do usuário vindo do Google. None = conflito com conta local."""
+    link = (
+        db.query(models.OAuthAccount)
+        .filter(models.OAuthAccount.provider == "google", models.OAuthAccount.provider_user_id == sub)
+        .first()
+    )
+    if link:
+        return db.get(models.User, link.user_id)
+
+    existing = db.query(models.User).filter(models.User.email == email).first()
+    if existing:
+        # Só vincula automáticamente quando o Google confirma o e-mail.
+        if not email_verified:
+            return None
+        db.add(models.OAuthAccount(user_id=existing.id, provider="google", provider_user_id=sub))
+        if not existing.avatar_url and avatar_url:
+            existing.avatar_url = avatar_url
+        db.flush()
+        return existing
+
+    user = models.User(email=email, display_name=display_name or None, avatar_url=avatar_url or None)
+    db.add(user)
+    db.flush()
+    db.add(models.Profile(id=user.id))
+    db.add(models.OAuthAccount(user_id=user.id, provider="google", provider_user_id=sub))
+    db.flush()
+    return user
 
 
 def _set_auth_cookies(response: Response, user_id: str, db: Session) -> None:
@@ -98,3 +151,40 @@ def logout(response: Response):
 @router.get("/me", response_model=schemas.UserOut)
 def me(user: models.User = Depends(get_current_user)):
     return user
+
+
+@router.get("/google/login", name="google_login")
+async def google_login(request: Request):
+    if not settings.google_client_id or not settings.google_client_secret:
+        return _redirect_login(GOOGLE_OFF)
+    redirect_uri = settings.google_redirect_uri or str(request.base_url).rstrip("/") + "/auth/google/callback"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback", name="google_callback")
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except OAuthError:
+        return _redirect_login(GOOGLE_FAILED)
+
+    userinfo = token.get("userinfo") or {}
+    sub = str(userinfo.get("sub") or "")
+    email = str(userinfo.get("email") or "").lower().strip()
+    if not sub or not email:
+        return _redirect_login(GOOGLE_FAILED)
+
+    user = _resolve_google_user(
+        db,
+        sub=sub,
+        email=email,
+        email_verified=bool(userinfo.get("email_verified")),
+        display_name=userinfo.get("name"),
+        avatar_url=userinfo.get("picture"),
+    )
+    if user is None:
+        return _redirect_login(GOOGLE_LINK_REQUIRED)
+
+    response = RedirectResponse(f"{settings.frontend_url}/today", status_code=303)
+    _set_auth_cookies(response, str(user.id), db)
+    return response

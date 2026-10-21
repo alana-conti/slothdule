@@ -1,9 +1,7 @@
-"""POST /auth/* e GET /auth/me."""
-
-from .helpers import unique
-
+"""POST /auth/* e GET /auth/me (+ fluxo OAuth Google com client fake)."""
 
 import pytest
+from fastapi.responses import RedirectResponse
 
 from .helpers import unique
 
@@ -110,3 +108,143 @@ def test_me_requires_auth(client):
 def test_routes_require_auth(client, method, path):
     r = client.request(method, path)
     assert r.status_code == 401, f"{method} {path} deveria exigir auth"
+
+
+# --- OAuth Google ---
+
+
+class _FakeGoogleClient:
+    def __init__(self, token):
+        self.token = token
+        self.redirect_uris = []
+
+    async def authorize_redirect(self, request, redirect_uri, **kwargs):
+        self.redirect_uris.append(redirect_uri)
+        return RedirectResponse("https://accounts.google.com/o/oauth2/v2/auth")
+
+    async def authorize_access_token(self, request):
+        return self.token
+
+
+class _FakeOAuth:
+    def __init__(self, token):
+        self.google = _FakeGoogleClient(token)
+
+
+_TOKEN = {
+    "userinfo": {
+        "sub": "google-sub-123",
+        "email": "google-user@example.com",
+        "email_verified": True,
+        "name": "Google User",
+        "picture": "https://lh3.googleusercontent.com/avatar.jpg",
+    }
+}
+
+
+@pytest.fixture()
+def google_env(monkeypatch):
+    from app import config
+
+    # Userinfo novo por teste: o banco persiste entre testes, então sub/email
+    # repetidos colidiriam com o vínculo do teste anterior.
+    token = {"userinfo": {**_TOKEN["userinfo"], "sub": f"sub-{unique('gsub')}", "email": f"{unique('gusr')}@example.com"}}
+    fake = _FakeOAuth(token)
+    monkeypatch.setattr("app.routers.auth.oauth", fake)
+    monkeypatch.setattr(config.settings, "google_client_id", "test-client-id")
+    monkeypatch.setattr(config.settings, "google_client_secret", "test-secret")
+    return fake
+
+
+def test_google_login_redirects_when_unconfigured(client):
+    r = client.get("/auth/google/login", follow_redirects=False)
+    assert r.status_code == 303
+    assert "/login?error=" in r.headers["location"]
+
+
+def test_google_callback_redirects_when_unconfigured(client):
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303
+    assert "/login?error=" in r.headers["location"]
+
+
+def test_google_login_redirects_to_provider(client, google_env):
+    r = client.get("/auth/google/login", follow_redirects=False)
+    assert r.status_code in (302, 307), r.text
+    assert r.headers["location"].startswith("https://accounts.google.com/")
+
+
+def test_google_callback_creates_user_and_logs_in(client, google_env, engine):
+    from sqlalchemy.orm import sessionmaker
+    from app import models
+
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303, r.text
+    assert r.headers["location"].endswith("/today")
+    assert "slothdule_access" in r.cookies
+
+    r = client.get("/auth/me")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["email"] == google_env.google.token["userinfo"]["email"]
+    assert body["display_name"] == "Google User"
+    assert body["avatar_url"].startswith("https://lh3.googleusercontent.com/")
+
+    TestingSession = sessionmaker(bind=engine)
+    with TestingSession() as session:
+        row = session.query(models.OAuthAccount).filter_by(provider="google").one()
+        assert row.provider_user_id == google_env.google.token["userinfo"]["sub"]
+        assert session.get(models.Profile, row.user_id) is not None
+
+
+def test_google_callback_links_existing_email_with_verification(client, google_env, engine):
+    from sqlalchemy.orm import sessionmaker
+    from app import models
+
+    email = f"{unique('glink')}@example.com"
+    r = client.post("/auth/signup", json={"email": email, "password": "secret123"})
+    local_id = r.json()["id"]
+    client.post("/auth/logout")
+
+    google_env.google.token["userinfo"]["email"] = email
+    client.cookies.clear()
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303, r.text
+
+    r = client.get("/auth/me")
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == local_id, "deve ser o mesmo usuário, não um novo"
+
+    TestingSession = sessionmaker(bind=engine)
+    with TestingSession() as session:
+        sub = google_env.google.token["userinfo"]["sub"]
+        assert session.query(models.OAuthAccount).filter_by(provider="google", provider_user_id=sub).count() == 1
+
+
+def test_google_callback_rejects_unverified_email_with_local_account(client, google_env, engine):
+    from sqlalchemy.orm import sessionmaker
+    from app import models
+
+    email = f"{unique('gunv')}@example.com"
+    assert client.post("/auth/signup", json={"email": email, "password": "secret123"}).status_code == 201
+
+    google_env.google.token["userinfo"]["email"] = email
+    google_env.google.token["userinfo"]["email_verified"] = False
+    client.cookies.clear()
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303
+    assert "/login?error=" in r.headers["location"]
+    assert "slothdule_access" not in r.cookies
+    assert client.get("/auth/me").status_code == 401
+
+    TestingSession = sessionmaker(bind=engine)
+    with TestingSession() as session:
+        sub = google_env.google.token["userinfo"]["sub"]
+        assert session.query(models.OAuthAccount).filter_by(provider="google", provider_user_id=sub).count() == 0
+
+
+def test_google_callback_rejects_incomplete_userinfo(client, google_env):
+    google_env.google.token["userinfo"] = {}
+    r = client.get("/auth/google/callback", follow_redirects=False)
+    assert r.status_code == 303
+    assert "/login?error=" in r.headers["location"]

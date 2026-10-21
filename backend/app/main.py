@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
 from app.routers import attachments, auth, categories, clients, files, projects, reminders, rewards, subtasks, tasks
@@ -12,6 +13,14 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+# Sessão leve só para o fluxo OAuth (armazena o `state` anti-CSRF entre
+# /auth/google/login e /auth/google/callback).
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.jwt_secret,
+    same_site="lax",
+    https_only=settings.cookie_secure,
 )
 
 

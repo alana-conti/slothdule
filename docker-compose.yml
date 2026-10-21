@@ -31,6 +31,10 @@ services:
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://seu-dominio}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      FRONTEND_URL: ${FRONTEND_URL:-https://seu-dominio}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
     volumes:
       - filedata:/data
     # Healthcheck para `docker ps`/`up --wait` (urllib: imagem slim não tem curl).
@@ -59,7 +63,8 @@ services:
       dockerfile: Dockerfile.web
       target: runner
       args:
-        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:8000}
+        # Browser → API. Em deploy real, PUBLIC_API_URL é definido no CI/secret.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:${API_PORT:-8002}}
     restart: unless-stopped
     depends_on:
       - api

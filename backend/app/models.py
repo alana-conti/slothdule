@@ -115,7 +115,7 @@ class User(Base):
 
 
 class OAuthAccount(Base):
-    """Reservada para a Fase 7 (OAuth Google). Não usada até lá."""
+    """Provedor externo de login (Google), uma linha por vínculo user↔provider."""
 
     __tablename__ = "oauth_accounts"
 
