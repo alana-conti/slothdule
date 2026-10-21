@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     max_upload_mb: int = 20
     cors_origins: str = "http://localhost:3000"
     cookie_secure: bool = False
+    # Domínio pai compartilhado pelos cookies de sessão. Obrigatório quando app
+    # e API rodam em subdomínios diferentes (o callback OAuth emite os cookies
+    # direto pela API); vazio = host-only, adequado a localhost.
+    cookie_domain: str = ""
     # URL do frontend; destino dos redirects pós-oAuth (callback/session).
     frontend_url: str = "http://localhost:3000"
     # Fase 7 (OAuth Google): preencha no Google Cloud. O redirect_uri da

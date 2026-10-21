@@ -54,6 +54,7 @@ def cookie_kwargs(max_age: int) -> dict:
         "httponly": True,
         "secure": settings.cookie_secure,
         "samesite": "lax",
+        "domain": settings.cookie_domain or None,
         "max_age": max_age,
         "path": "/",
     }
