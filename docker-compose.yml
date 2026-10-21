@@ -31,6 +31,8 @@ services:
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://seu-dominio}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      # Em prod, defina no .env (ver .env.prod.example). Sem ela o login
+      # Google redireciona para o placeholder abaixo.
       FRONTEND_URL: ${FRONTEND_URL:-https://seu-dominio}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
