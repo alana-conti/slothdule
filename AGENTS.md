@@ -1,5 +1,15 @@
 # Repository Guidelines
 
+## Project Skills
+
+Project-specific agent skills live in `ai/skills/`. Each skill is a folder with a `SKILL.md` (YAML frontmatter with `name` and `description`, plus instructions). Load the relevant skill into context before performing the task it describes; do not edit production or shared infrastructure following only general knowledge when a project skill covers it.
+
+Skill summary:
+
+- `ai/skills/setup-skills/` - Bootstrap the skills environment: installs required global skills via `npx skills` and links everything under `ai/skills/` into `~/.agents/skills/` so agents discover them. Idempotent `setup.sh`; run it on new machines or after adding project skills.
+- `ai/skills/connect-production/` - SSH access to the Slothdule production server (`ssh guivi@194.163.159.175`) for debugging, logs, container management, and other explicitly requested operations. Includes server/container reference and safety rules.
+- `ai/skills/playwright-cli/` - Browser automation and E2E testing guidance using the Playwright CLI. Local copy of the global `microsoft/playwright-cli` skill, kept in-repo for the whole team.
+
 ## Project Structure & Module Organization
 
 Slothdule is a Next.js 16 PWA written in TypeScript. Route pages and server actions live in `src/app/`; reusable UI is in `src/components/`; feature-specific UI, data access, and actions belong in `src/features/`. Keep shared domain logic in `src/lib/` and types in `src/types/`. Unit tests sit next to their modules as `*.test.ts`. Static assets are in `public/`, and database schema changes are versioned in `supabase/migrations/` (for example, `0006_add_...sql`). Product, UX, architecture, and design decisions are documented in `docs/`.
