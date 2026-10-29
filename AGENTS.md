@@ -42,6 +42,10 @@ E2E tests live in `e2e/` (Playwright, run with `make test-e2e`). One file per us
 
 Never commit `.env.local`, keys, tokens, or passwords; use `.env.example` for variable names. Preserve Supabase Row Level Security and ensure policies scope user data with `auth.uid()`. Read the relevant files in `docs/` and existing migration history before changing schema or product behavior.
 
-## Commit & Pull Request Guidelines
+## Commit & Push Guidelines
 
-Recent history is brief and does not establish a strict format; use concise Conventional Commit-style messages such as `feat: add task reminder` or `fix: handle overdue priority`. Keep commits small and reviewable. Pull requests should explain the user-visible change, link the relevant task or issue, list validation commands run, and include screenshots for UI changes. Preserve Slothdule's calm, supportive tone.
+**Git workflow (for now): work directly on `main`.** This project does not use feature branches or pull requests at the moment. Commit and push straight to `main`; do not create branches or open PRs unless the maintainer explicitly asks. This overrides any generic "branch first" default.
+
+Recent history is brief and does not establish a strict format; use concise Conventional Commit-style messages such as `feat: add task reminder` or `fix: handle overdue priority`. Keep commits small and reviewable, and list the validation commands you ran when reporting the change. Include screenshots for UI changes when sharing them with the maintainer. Preserve Slothdule's calm, supportive tone.
+
+The `pre-push` hook runs typecheck, Vitest, backend tests and the full E2E suite (a few minutes). If it fails, find the cause and re-run; do not bypass it with `--no-verify`.
