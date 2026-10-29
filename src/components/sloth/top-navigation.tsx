@@ -6,7 +6,6 @@ type NavigationPage = "today" | "timeline" | "calendar" | "rewards";
 
 type TopNavigationProps = {
   current: NavigationPage;
-  showNewTask?: boolean;
 };
 
 const links: Array<{
@@ -23,10 +22,7 @@ const links: Array<{
 const navigationButtonClass =
   "inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-xl border border-sloth-border bg-sloth-card px-3 text-xs font-semibold text-sloth-forest transition hover:bg-sloth-beige";
 
-export function TopNavigation({
-  current,
-  showNewTask = false,
-}: TopNavigationProps) {
+export function TopNavigation({ current }: TopNavigationProps) {
   return (
     <nav
       aria-label="Navegação principal"
@@ -44,15 +40,6 @@ export function TopNavigation({
           {link.label}
         </Link>
       ))}
-
-      {showNewTask ? (
-        <a
-          className="inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-xl bg-sloth-moss px-3 text-xs font-semibold text-white transition hover:bg-sloth-forest"
-          href="#nova-tarefa"
-        >
-          Nova tarefa
-        </a>
-      ) : null}
 
       <form action={logout} className="shrink-0">
         <button className={navigationButtonClass} type="submit">

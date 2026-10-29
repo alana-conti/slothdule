@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("captura rápida", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/today");
+    await page.getByRole("button", { name: "Nova tarefa" }).click();
   });
 
   test("interpreta texto livre e cria a tarefa", async ({ page }) => {

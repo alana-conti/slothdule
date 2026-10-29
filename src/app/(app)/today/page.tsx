@@ -4,13 +4,11 @@ import { redirect } from "next/navigation";
 
 import {
   archiveTaskAction,
-  createTaskAction,
   updateTaskAction,
 } from "@/features/tasks/actions";
 import { DeleteTaskControl } from "@/features/tasks/delete-task-control";
 import { listCategories, listTasks, getUserLeafBalance } from "@/features/tasks/data";
 import { TaskForm } from "@/features/tasks/task-form";
-import { QuickCapture } from "@/features/tasks/quick-capture";
 import { TaskStatusControl } from "@/features/tasks/task-status-control";
 import {
   formatEstimatedMinutes,
@@ -369,7 +367,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             </p>
           </div>
 
-          <TopNavigation current="today" showNewTask />
+          <TopNavigation current="today" />
         </header>
 
         {message ? (
@@ -480,47 +478,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             title="Próximas tarefas"
           />
         </div>
-
-        <details
-          className="mt-8 rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:p-8"
-          id="nova-tarefa"
-          open
-        >
-          <summary className="cursor-pointer list-none">
-            <p className="text-xs font-semibold tracking-[0.18em] text-sloth-moss uppercase">
-              Nova tarefa
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-sloth-ink">
-              O que precisa sair da cabeça?
-            </h2>
-            <p className="mt-2 text-sm text-sloth-muted">
-              Abra este espaço para registrar uma nova demanda.
-            </p>
-          </summary>
-
-          <div className="mt-6 border-t border-sloth-border pt-6">
-            {categories.length > 0 ? (
-              <>
-                <QuickCapture categories={categories} />
-                <div className="relative flex py-4 items-center">
-                  <div className="flex-grow border-t border-sloth-border/40"></div>
-                  <span className="flex-shrink mx-4 text-xs text-sloth-muted font-medium bg-sloth-card px-2">ou use o formulário detalhado</span>
-                  <div className="flex-grow border-t border-sloth-border/40"></div>
-                </div>
-                <TaskForm
-                  action={createTaskAction}
-                  categories={categories}
-                  submitLabel="Criar tarefa"
-                />
-              </>
-            ) : (
-              <p className="rounded-2xl bg-sloth-beige/50 p-4 text-sloth-muted">
-                Nenhuma categoria disponível. Execute o seed do Supabase antes
-                de criar tarefas.
-              </p>
-            )}
-          </div>
-        </details>
 
         {groups.completed.length > 0 || groups.archived.length > 0 ? (
           <section className="mt-8">

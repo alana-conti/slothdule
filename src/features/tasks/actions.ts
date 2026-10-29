@@ -9,6 +9,7 @@ import {
   createTask,
   deleteTask,
   getTask,
+  listCategories,
   markRewardRedemptionDelivered,
   updateTask,
   redeemReward,
@@ -113,18 +114,39 @@ function redirectWithMessage(
   redirect(`${path}?${kind}=${encodeURIComponent(message)}`);
 }
 
-export async function createTaskAction(formData: FormData) {
+/** Carrega as categorias sob demanda (ex.: ao abrir o pop-up de nova tarefa). */
+export async function listCategoriesAction() {
+  return listCategories();
+}
+
+export type CreateTaskResult =
+  | { ok: true; taskId: string; title: string }
+  | { ok: false; error: string };
+
+/**
+ * Cria a tarefa sem redirecionar: quem chama decide o que mostrar (toast,
+ * erro inline). O revalidatePath atualiza a tela em que a pessoa está.
+ */
+export async function createTaskAction(
+  formData: FormData,
+): Promise<CreateTaskResult> {
+  let task;
+
   try {
-    await createTask(parseTaskInput(formData));
+    task = await createTask(parseTaskInput(formData));
   } catch (error) {
-    redirectWithMessage(
-      "error",
-      error instanceof Error ? error.message : "Não foi possível criar a tarefa.",
-    );
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Não foi possível criar a tarefa.",
+    };
   }
 
-  revalidatePath("/today");
-  redirectWithMessage("message", "Tarefa criada. Uma coisa a menos para guardar na cabeça.");
+  revalidatePath("/", "layout");
+
+  return { ok: true, taskId: task.id, title: task.title };
 }
 
 export async function updateTaskAction(formData: FormData) {

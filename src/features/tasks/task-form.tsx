@@ -28,7 +28,9 @@ const contextLabels = {
 };
 
 type TaskFormProps = {
-  action: (formData: FormData) => void | Promise<void>;
+  /** Server Action. Use `onSubmit` quando precisar controlar o envio no cliente. */
+  action?: (formData: FormData) => void | Promise<void>;
+  onSubmit?: React.FormEventHandler<HTMLFormElement>;
   categories: Category[];
   submitLabel: string;
   task?: Task;
@@ -36,12 +38,17 @@ type TaskFormProps = {
 
 export function TaskForm({
   action,
+  onSubmit,
   categories,
   submitLabel,
   task,
 }: TaskFormProps) {
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <form
+      action={action}
+      className="grid gap-4 sm:grid-cols-2"
+      onSubmit={onSubmit}
+    >
       {task ? <input name="taskId" type="hidden" value={task.id} /> : null}
 
       <div className="sm:col-span-2">

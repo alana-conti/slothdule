@@ -163,14 +163,15 @@ export async function getTask(taskId: string): Promise<Task | null> {
   }
 }
 
-export async function createTask(input: TaskInput) {
+export async function createTask(input: TaskInput): Promise<Task> {
   await requireUserId();
 
   try {
-    await apiJson("/tasks", {
+    const row = await apiJson<TaskRow>("/tasks", {
       body: JSON.stringify(toTaskPayload(input)),
       method: "POST",
     });
+    return mapTask(row);
   } catch {
     throw new Error("Não foi possível criar a tarefa.");
   }

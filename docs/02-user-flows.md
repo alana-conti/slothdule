@@ -26,7 +26,7 @@ O usuário deve entender em menos de 30 segundos:
 ## 2. Fluxo: criar tarefa manualmente
 
 ```text
-Usuário clica em “Nova tarefa”
+Usuário clica no botão flutuante “Nova tarefa” (canto inferior direito) ou aperta a tecla N
 ↓
 Preenche título
 ↓
@@ -44,8 +44,16 @@ Adiciona checklist, links, áudio ou observações
 ↓
 Salva tarefa
 ↓
+Pop-up fecha, a pessoa continua na tela em que estava
+↓
+Toast do Slothdule confirma (com link “Abrir tarefa”)
+↓
 Tarefa aparece na tela Hoje, calendário e timeline
 ```
+
+### Feedback de criação (toast)
+
+O aviso segue a identidade do app: cartão creme com borda de folha, mascote como avatar, frase curta e afetiva (“Uma coisa a menos para guardar na cabeça.”), fio de tempo em verde-folha e animação suave (desligada com `prefers-reduced-motion`). Some sozinho em 5 s, pausa ao passar o mouse/foco e pode ser fechado. Erros de criação aparecem dentro do pop-up, sem apagar o que foi digitado. Componente: `src/components/sloth/toast.tsx`.
 
 ### Campos mínimos para salvar
 

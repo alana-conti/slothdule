@@ -47,7 +47,8 @@ export async function createTaskByForm(
 ) {
   await page.goto("/today");
 
-  const section = page.locator("#nova-tarefa");
+  await page.getByRole("button", { name: "Nova tarefa" }).click();
+  const section = page.getByRole("dialog", { name: "O que precisa sair da cabeça?" });
   await section.getByLabel("Título").fill(options.title);
   await section
     .getByLabel("Categoria")

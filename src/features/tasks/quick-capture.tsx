@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import type { Category, TaskPriority } from "@/types/tasks";
-import { createTaskAction } from "@/features/tasks/actions";
 
 type QuickCaptureProps = {
   categories: Category[];
+  onSubmit: React.FormEventHandler<HTMLFormElement>;
 };
 
 const priorityLabels: Record<TaskPriority, string> = {
@@ -15,7 +15,7 @@ const priorityLabels: Record<TaskPriority, string> = {
   critical: "Crítica",
 };
 
-export function QuickCapture({ categories }: QuickCaptureProps) {
+export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
   const [text, setText] = useState("");
   
   // Suggestion states
@@ -141,6 +141,7 @@ export function QuickCapture({ categories }: QuickCaptureProps) {
           </label>
           <input
             className="min-h-11 w-full rounded-2xl border border-sloth-border bg-sloth-card px-4 outline-none focus:border-sloth-moss focus:ring-3 focus:ring-sloth-moss/15 text-sm"
+            autoFocus
             id="quick-input"
             onChange={(e) => handleInputChange(e.target.value)}
             placeholder="Ex: Reunião com cliente amanhã urgente"
@@ -152,8 +153,8 @@ export function QuickCapture({ categories }: QuickCaptureProps) {
         {/* Suggestion Card */}
         {text.trim() && (
           <form
-            action={createTaskAction}
             className="rounded-xl border border-dashed border-sloth-moss/30 bg-sloth-card p-4 space-y-4 animate-in fade-in duration-200"
+            onSubmit={onSubmit}
           >
             {/* Hidden fields representing final data to submit */}
             <input type="hidden" name="status" value="todo" />
