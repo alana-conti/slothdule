@@ -22,8 +22,9 @@ Slothdule is a Next.js 16 PWA written in TypeScript. Route pages and server acti
 - `npm run typecheck` checks TypeScript without emitting files.
 - `npm run build` creates the production build; `npm run start` serves it.
 - `npx vitest run` executes the unit-test suite once. Use `npx vitest` while developing tests.
+- `make test-e2e` runs the Playwright E2E suite (`npx playwright test`) against the local docker compose stack (web :3000, API :8002); it brings the stack up first. Requires chromium (`npx playwright install chromium`). Reports live in `playwright-report/`, artifacts in `test-results/`.
 
-Before submitting a change, run `npm run lint`, `npm run typecheck`, and the relevant Vitest tests.
+Before submitting a change, run `npm run lint`, `npm run typecheck`, and the relevant Vitest tests. The `pre-push` lefthook hook runs typecheck, Vitest, backend tests and the full E2E suite.
 
 ## Coding Style & Naming Conventions
 
@@ -34,6 +35,8 @@ Use TypeScript and four-space indentation, matching the existing source. Prefer 
 Use Vitest for unit tests. Name tests after the module they cover, e.g. `src/lib/priority/priority.test.ts`, and describe observable behavior, boundary cases, and regressions. Add or update tests whenever changing priority, reward, task, or notification logic. There is no enforced coverage threshold; aim for meaningful coverage of business rules.
 
 Backend API tests live in `backend/tests/` (pytest + FastAPI TestClient, run with `make test-backend`). Convention: one `test_<router>.py` per module in `backend/app/routers/`, shared fixtures in `conftest.py` (`client`, `user_client`, `second_user_client`), shared HTTP builders in `helpers.py`, and cross-user isolation proof in `test_isolation.py`. Always test through HTTP (never call router functions directly); cover happy path, validation errors (400/422), 401 without session, and 404 on other users' data.
+
+E2E tests live in `e2e/` (Playwright, run with `make test-e2e`). One file per user flow (`auth`, `today`, `quick-capture`, `task-lifecycle`), driven through the real UI and the local dev stack (no mocks). `e2e/auth.setup.ts` creates/reuses the `e2e@slothdule.dev` account and a category, saving cookies to `.playwright/.auth/user.json`; `e2e/cleanup.teardown.ts` deletes tasks titled `[e2e] ...` after the run. Add a file per new flow, keep assertions on user-visible behavior ("calm tone" copy changes should be treated as feature changes, so prefer stable role-based locators over copy text where possible), and never depend on execution order between files.
 
 ## Database, Configuration, and Security
 

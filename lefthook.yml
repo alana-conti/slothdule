@@ -19,3 +19,5 @@ pre-push:
       run: npx vitest run
     backend-tests:
       run: make test-backend
+    e2e-tests:
+      run: make test-e2e

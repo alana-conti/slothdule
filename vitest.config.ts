@@ -8,4 +8,8 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  // Unitários do frontend em src/; e2e/ fica sob o Playwright (testDir).
+  test: {
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+  },
 });

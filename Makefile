@@ -47,7 +47,11 @@ ps: ## Mostra o estado dos containers
 build: ## Builda as imagens docker (api + web)
 	docker compose build
 
-test: test-backend test-frontend ## Roda toda a suíte (backend + frontend)
+test: test-backend test-frontend test-e2e ## Roda toda a suíte (backend + frontend + e2e)
+
+test-e2e: ## Playwright E2E contra a stack local (sobe db+api+web via docker compose)
+	$(COMPOSE_DEV) up -d --wait db api web
+	npx playwright test
 
 test-backend: ## Pytest contra Postgres (local: container efêmero na 5434; CI: service do workflow via TEST_DATABASE_URL)
 ifndef TEST_DATABASE_URL

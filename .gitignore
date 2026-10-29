@@ -30,6 +30,11 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Playwright e2e
+/test-results
+/playwright-report
+/.playwright
+
 # Backend próprio (FastAPI + Postgres)
 .venv-backend/
 backend/.venv/
