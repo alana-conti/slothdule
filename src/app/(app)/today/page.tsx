@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { listCategories, listTasks, getUserLeafBalance } from "@/features/tasks/data";
 import { TaskRow } from "@/features/tasks/task-row";
 import {
+  FOCUS_LIMIT,
   formatEstimatedMinutes,
   getDailyEstimatedMinutes,
   getTodayDateKey,
@@ -28,7 +29,10 @@ type TaskSectionProps = {
   categoriesById: Map<string, Category>;
   description: string;
   emptyMessage: string;
-  /** Em andamento: ficam numa área pequena "Em foco agora" no alto da seção. */
+  /**
+   * Em andamento: ficam numa área fixa "Em foco agora" no alto da seção, com
+   * FOCUS_LIMIT espaços. Passar a prop (mesmo vazia) é o que mostra a área.
+   */
   focusTasks?: Task[];
   id?: string;
   isOverdue?: boolean;
@@ -47,12 +51,101 @@ function formatLongDate(date: string) {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
+type FocusAreaProps = {
+  categories: Category[];
+  categoriesById: Map<string, Category>;
+  tasks: Task[];
+  todayDate: string;
+};
+
+/**
+ * Área fixa com FOCUS_LIMIT espaços para o que está em andamento. Passar do
+ * limite não é bloqueado: só muda o tom, para a pessoa perceber sozinha.
+ */
+function FocusArea({
+  categories,
+  categoriesById,
+  tasks,
+  todayDate,
+}: FocusAreaProps) {
+  const isOver = tasks.length > FOCUS_LIMIT;
+  const freeSlots = Math.max(0, FOCUS_LIMIT - tasks.length);
+
+  return (
+    <div
+      aria-label="Em foco agora"
+      className={`mb-4 rounded-2xl border p-3 ${
+        isOver
+          ? "border-sloth-amber/45 bg-sloth-amber/10"
+          : "border-sloth-moss/30 bg-sloth-moss/5"
+      }`}
+      role="region"
+    >
+      <div className="mb-2 flex items-center justify-between gap-3 px-1">
+        <p
+          className={`text-xs font-semibold tracking-[0.14em] uppercase ${
+            isOver ? "text-sloth-ink" : "text-sloth-moss"
+          }`}
+        >
+          Em foco agora
+        </p>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            isOver
+              ? "bg-sloth-amber/25 text-sloth-ink"
+              : "bg-sloth-moss/10 text-sloth-forest"
+          }`}
+        >
+          {tasks.length}/{FOCUS_LIMIT}
+          <span className="sr-only"> em foco</span>
+        </span>
+      </div>
+
+      <div className="grid gap-2">
+        {tasks.map((task) => (
+          <TaskRow
+            categories={categories}
+            category={categoriesById.get(task.categoryId)}
+            // Em foco pode vir de qualquer data: o atraso continua visível.
+            isOverdue={task.dueDate < todayDate}
+            key={task.id}
+            priority={calculatePriorityScore(task, todayDate)}
+            task={task}
+          />
+        ))}
+
+        {Array.from({ length: freeSlots }, (_, index) => (
+          <div
+            className="flex min-h-16 items-center gap-3 rounded-2xl border border-dashed border-sloth-moss/35 px-4 py-3 text-sm text-sloth-muted"
+            key={`free-${index}`}
+          >
+            <span
+              aria-hidden="true"
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-dashed border-sloth-moss/40 text-xs text-sloth-moss"
+            >
+              ▶
+            </span>
+            Espaço livre. Inicie uma tarefa com ▶ para trazê-la para o foco.
+          </div>
+        ))}
+      </div>
+
+      {isOver ? (
+        <p className="mt-3 px-1 text-sm text-sloth-ink">
+          Muita coisa ao mesmo tempo. Que tal terminar ou pausar uma antes de
+          abrir outra frente?
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function TaskSection({
   categories,
   categoriesById,
   description,
   emptyMessage,
-  focusTasks = [],
+  focusTasks,
   id,
   isOverdue = false,
   label,
@@ -90,33 +183,17 @@ function TaskSection({
               : "bg-sloth-beige text-sloth-forest"
           }`}
         >
-          {tasks.length + focusTasks.length}
+          {tasks.length + (focusTasks?.length ?? 0)}
         </span>
       </div>
 
-      {focusTasks.length > 0 ? (
-        <div
-          aria-label="Em foco agora"
-          className="mb-4 rounded-2xl border border-sloth-moss/30 bg-sloth-moss/5 p-3"
-          role="region"
-        >
-          <p className="mb-2 px-1 text-xs font-semibold tracking-[0.14em] text-sloth-moss uppercase">
-            Em foco agora
-          </p>
-          <div className="grid gap-2">
-            {focusTasks.map((task) => (
-              <TaskRow
-                categories={categories}
-                category={categoriesById.get(task.categoryId)}
-                // Em foco pode vir de qualquer data: o atraso continua visível.
-                isOverdue={task.dueDate < todayDate}
-                key={task.id}
-                priority={calculatePriorityScore(task, todayDate)}
-                task={task}
-              />
-            ))}
-          </div>
-        </div>
+      {focusTasks ? (
+        <FocusArea
+          categories={categories}
+          categoriesById={categoriesById}
+          tasks={focusTasks}
+          todayDate={todayDate}
+        />
       ) : null}
 
       {tasks.length > 0 ? (
@@ -132,7 +209,7 @@ function TaskSection({
             />
           ))}
         </div>
-      ) : focusTasks.length === 0 ? (
+      ) : (focusTasks?.length ?? 0) === 0 ? (
         <p className="rounded-2xl border border-dashed border-sloth-border bg-sloth-card px-5 py-7 text-center text-sm text-sloth-muted">
           {emptyMessage}
         </p>

@@ -1,6 +1,9 @@
 import { calculatePriorityScore } from "@/lib/priority";
 import type { Task } from "@/types/tasks";
 
+/** Quantas tarefas cabem "em foco" ao mesmo tempo. É um convite, não uma trava. */
+export const FOCUS_LIMIT = 2;
+
 export const OPEN_TASK_STATUSES = ["todo", "in_progress", "waiting"] as const;
 
 export type TodayTaskGroups = {

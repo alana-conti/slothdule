@@ -55,6 +55,47 @@ test.describe("tela Hoje", () => {
     ).toBeVisible();
   });
 
+  test("a área Em foco agora é fixa na Hoje e mostra o contador N/2", async ({
+    page,
+  }) => {
+    const focus = page.getByRole("region", { name: "Em foco agora" });
+    const counter = focus.getByText(/^\d+\/2 em foco$/);
+
+    await expect(focus).toBeVisible();
+    await expect(counter).toBeVisible();
+
+    const readCount = async () =>
+      Number((await counter.textContent())?.split("/")[0]);
+    const before = await readCount();
+
+    const title = uniqueTitle("Contador de foco");
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+    await taskCard(page, title)
+      .getByRole("button", { name: "Iniciar tarefa", exact: true })
+      .click();
+
+    await expect(focus).toContainText(title);
+    expect(await readCount()).toBe(before + 1);
+  });
+
+  test("passar de dois em foco não bloqueia, só avisa com calma", async ({
+    page,
+  }) => {
+    const focus = page.getByRole("region", { name: "Em foco agora" });
+
+    for (const base of ["Foco um", "Foco dois", "Foco três"]) {
+      const title = uniqueTitle(base);
+      await createTaskByForm(page, { title, dueDate: todayKey() });
+      await taskCard(page, title)
+        .getByRole("button", { name: "Iniciar tarefa", exact: true })
+        .click();
+      await expect(focus).toContainText(title);
+    }
+
+    await expect(focus.getByText(/^([3-9]|\d{2,})\/2 em foco$/)).toBeVisible();
+    await expect(focus.getByText("Muita coisa ao mesmo tempo")).toBeVisible();
+  });
+
   test("tarefa futura aparece em Próximas tarefas", async ({ page }) => {
     const title = uniqueTitle("Tarefa futura");
     await createTaskByForm(page, { title, dueDate: todayKey(7) });
