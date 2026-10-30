@@ -7,8 +7,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://slothdule:slothdule@localhost:5432/slothdule"
     jwt_secret: str = "dev-only-secret-change-me"
     jwt_algorithm: str = "HS256"
-    access_ttl_seconds: int = 3600
-    refresh_ttl_days: int = 30
+    # Nada no frontend chama /auth/refresh, então o cookie de acesso é a
+    # sessão de fato: ele define quanto tempo o login dura (7 dias).
+    access_ttl_seconds: int = 7 * 24 * 3600
+    refresh_ttl_days: int = 7
     data_dir: str = "./data"
     max_upload_mb: int = 20
     cors_origins: str = "http://localhost:3000"
