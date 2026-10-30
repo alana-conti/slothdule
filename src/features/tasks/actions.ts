@@ -149,30 +149,80 @@ export async function createTaskAction(
   return { ok: true, taskId: task.id, title: task.title };
 }
 
-export async function updateTaskAction(formData: FormData) {
-  let result;
+export type TaskActionResult =
+  | { ok: true; title: string; leavesAwarded: number }
+  | { ok: false; error: string };
+
+export type SimpleActionResult = { ok: true } | { ok: false; error: string };
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+/** Muda só o status, preservando o resto da tarefa. */
+async function applyTaskStatus(taskId: string, status: string) {
+  if (!taskStatuses.includes(status as TaskInput["status"])) {
+    throw new Error("Status inválido.");
+  }
+
+  const task = await getTask(taskId);
+
+  if (!task) {
+    throw new Error("Tarefa não encontrada.");
+  }
+
+  const result = await updateTask(taskId, {
+    categoryId: task.categoryId,
+    title: task.title,
+    description: task.description,
+    workContext: task.workContext,
+    status: status as TaskInput["status"],
+    priority: task.priority,
+    startDate: task.startDate,
+    dueDate: task.dueDate,
+    dueTime: task.dueTime,
+    estimatedMinutes: task.estimatedMinutes,
+  });
+
+  return { title: task.title, leavesAwarded: result.leavesAwarded };
+}
+
+/** Edição a partir da lista: devolve o resultado em vez de redirecionar. */
+export async function updateTaskAction(
+  formData: FormData,
+): Promise<TaskActionResult> {
   try {
-    result = await updateTask(getTaskId(formData), parseTaskInput(formData));
+    const input = parseTaskInput(formData);
+    const result = await updateTask(getTaskId(formData), input);
+
+    revalidatePath("/", "layout");
+
+    return { ok: true, title: input.title, leavesAwarded: result.leavesAwarded };
   } catch (error) {
-    redirectWithMessage(
-      "error",
-      error instanceof Error
-        ? error.message
-        : "Não foi possível atualizar a tarefa.",
-    );
+    return {
+      ok: false,
+      error: errorMessage(error, "Não foi possível atualizar a tarefa."),
+    };
   }
+}
 
-  revalidatePath("/today");
-  revalidatePath("/rewards");
+/** Mudança de status a partir da lista: sem redirecionar, para manter a tela. */
+export async function changeTaskStatusAction(
+  taskId: string,
+  status: string,
+): Promise<TaskActionResult> {
+  try {
+    const result = await applyTaskStatus(taskId, status);
 
-  if (result && result.leavesAwarded > 0) {
-    redirectWithMessage(
-      "message",
-      `Uma coisa de cada vez. +${result.leavesAwarded} Folhinhas para você.`,
-    );
+    revalidatePath("/", "layout");
+
+    return { ok: true, ...result };
+  } catch (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Não foi possível atualizar o status."),
+    };
   }
-
-  redirectWithMessage("message", "Tarefa atualizada com calma.");
 }
 
 export async function updateTaskStatusAction(formData: FormData) {
@@ -187,36 +237,11 @@ export async function updateTaskStatusAction(formData: FormData) {
         ? `/tasks/${taskId}`
         : "/today";
 
-    const status = getText(formData, "status");
-
-    if (!taskStatuses.includes(status as TaskInput["status"])) {
-      throw new Error("Status inválido.");
-    }
-
-    const task = await getTask(taskId);
-
-    if (!task) {
-      throw new Error("Tarefa não encontrada.");
-    }
-
-    result = await updateTask(taskId, {
-      categoryId: task.categoryId,
-      title: task.title,
-      description: task.description,
-      workContext: task.workContext,
-      status: status as TaskInput["status"],
-      priority: task.priority,
-      startDate: task.startDate,
-      dueDate: task.dueDate,
-      dueTime: task.dueTime,
-      estimatedMinutes: task.estimatedMinutes,
-    });
+    result = await applyTaskStatus(taskId, getText(formData, "status"));
   } catch (error) {
     redirectWithMessage(
       "error",
-      error instanceof Error
-        ? error.message
-        : "Não foi possível atualizar o status.",
+      errorMessage(error, "Não foi possível atualizar o status."),
       returnPath,
     );
   }
@@ -236,20 +261,37 @@ export async function updateTaskStatusAction(formData: FormData) {
   redirectWithMessage("message", "Status atualizado.", returnPath);
 }
 
-export async function archiveTaskAction(formData: FormData) {
+export async function archiveTaskAction(
+  taskId: string,
+): Promise<SimpleActionResult> {
   try {
-    await archiveTask(getTaskId(formData));
-  } catch (error) {
-    redirectWithMessage(
-      "error",
-      error instanceof Error
-        ? error.message
-        : "Não foi possível arquivar a tarefa.",
-    );
-  }
+    await archiveTask(taskId);
+    revalidatePath("/", "layout");
 
-  revalidatePath("/today");
-  redirectWithMessage("message", "Tarefa arquivada.");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Não foi possível arquivar a tarefa."),
+    };
+  }
+}
+
+/** Exclusão a partir da lista: sem redirecionar. */
+export async function removeTaskAction(
+  taskId: string,
+): Promise<SimpleActionResult> {
+  try {
+    await deleteTask(taskId);
+    revalidatePath("/", "layout");
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Não foi possível excluir a tarefa."),
+    };
+  }
 }
 
 export async function deleteTaskAction(formData: FormData) {

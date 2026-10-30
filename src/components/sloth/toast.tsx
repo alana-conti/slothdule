@@ -18,7 +18,10 @@ type ToastInput = {
     title: string;
     description?: string;
     tone?: ToastTone;
-    action?: { href: string; label: string };
+    /** Link para outra tela (`href`) ou ação ali mesmo, como "Desfazer" (`onClick`). */
+    action?:
+        | { href: string; label: string }
+        | { label: string; onClick: () => void };
     /** Tempo na tela, em ms. Padrão: 5s (8s para erros). */
     duration?: number;
 };
@@ -157,7 +160,7 @@ function ToastCard({ item, onRemove }: ToastCardProps) {
                             {item.description}
                         </p>
                     ) : null}
-                    {item.action ? (
+                    {item.action && "href" in item.action ? (
                         <Link
                             className="mt-2 inline-flex min-h-8 items-center text-xs font-semibold text-sloth-forest underline-offset-2 hover:underline"
                             href={item.action.href}
@@ -165,6 +168,22 @@ function ToastCard({ item, onRemove }: ToastCardProps) {
                         >
                             {item.action.label}
                         </Link>
+                    ) : null}
+                    {item.action && "onClick" in item.action ? (
+                        <button
+                            className="mt-2 inline-flex min-h-8 cursor-pointer items-center text-xs font-semibold text-sloth-forest underline-offset-2 hover:underline"
+                            onClick={() => {
+                                const { onClick } = item.action as {
+                                    onClick: () => void;
+                                };
+
+                                dismiss();
+                                onClick();
+                            }}
+                            type="button"
+                        >
+                            {item.action.label}
+                        </button>
                     ) : null}
                 </div>
             </div>

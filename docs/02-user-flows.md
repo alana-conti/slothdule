@@ -7,7 +7,7 @@ Usuário abre o Slothdule
 ↓
 Tela Hoje é exibida
 ↓
-Usuário vê tarefas atrasadas, tarefas de hoje e carga estimada
+Usuário vê tarefas de hoje, depois as atrasadas (com um aviso "N atrasadas" no resumo do topo), e a carga estimada
 ↓
 Usuário identifica a tarefa mais urgente
 ↓
@@ -22,6 +22,14 @@ O usuário deve entender em menos de 30 segundos:
 - o que precisa ser feito hoje;
 - se o dia está sobrecarregado;
 - qual tarefa deve receber atenção primeiro.
+
+### Lista de tarefas (linha compacta)
+
+Cada tarefa é uma linha, não um card grande: círculo para concluir, título, prioridade, categoria, prazo e estimativa, botão ▶ para iniciar e seletor de status. Clicar no título (ou na seta) abre os detalhes na própria linha: descrição, prioridade calculada, Editar, Arquivar, Excluir e link para a tela da tarefa.
+
+- Mudar o status é um clique (círculo, ▶ ou seletor), sem botão "Aplicar" e sem recarregar: a tela e o scroll ficam como estão.
+- A confirmação aparece como toast; concluir, iniciar, mudar status e arquivar oferecem **Desfazer**, que devolve o status anterior. As Folhinhas já ganhas por uma conclusão não são retiradas ao desfazer, e reconcluir a mesma tarefa não rende Folhinhas de novo.
+- Editar acontece dentro da linha; excluir pede confirmação na linha.
 
 ## 2. Fluxo: criar tarefa manualmente
 

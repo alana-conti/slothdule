@@ -1,52 +1,20 @@
 import Image from "next/image";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import {
-  archiveTaskAction,
-  updateTaskAction,
-} from "@/features/tasks/actions";
-import { DeleteTaskControl } from "@/features/tasks/delete-task-control";
 import { listCategories, listTasks, getUserLeafBalance } from "@/features/tasks/data";
-import { TaskForm } from "@/features/tasks/task-form";
-import { TaskStatusControl } from "@/features/tasks/task-status-control";
+import { TaskRow } from "@/features/tasks/task-row";
 import {
   formatEstimatedMinutes,
   getDailyEstimatedMinutes,
-  getTaskDailyEstimatedMinutes,
-  getTaskDurationDays,
   getTodayDateKey,
   groupTasksForToday,
 } from "@/features/tasks/today";
 import { calculatePriorityScore } from "@/lib/priority";
 import { getCurrentUser } from "@/lib/api/server";
-import type { Category, Task, TaskPriority, TaskStatus } from "@/types/tasks";
+import type { Category, Task } from "@/types/tasks";
 
 import { PwaNotificationManager } from "@/components/sloth/pwa-notification-manager";
 import { TopNavigation } from "@/components/sloth/top-navigation";
-
-const priorityLabels: Record<TaskPriority, string> = {
-  low: "Baixa",
-  medium: "Média",
-  high: "Alta",
-  critical: "Crítica",
-};
-
-const priorityClasses: Record<TaskPriority, string> = {
-  low: "border-sloth-border bg-sloth-beige/45 text-sloth-muted",
-  medium: "border-sloth-leaf/30 bg-sloth-leaf/10 text-sloth-forest",
-  high: "border-sloth-amber/35 bg-sloth-amber/10 text-sloth-ink",
-  critical:
-    "border-sloth-terracotta/35 bg-sloth-terracotta/10 text-sloth-ink",
-};
-
-const statusLabels: Record<TaskStatus, string> = {
-  todo: "A fazer",
-  in_progress: "Em andamento",
-  waiting: "Aguardando",
-  done: "Concluída",
-  archived: "Arquivada",
-};
 
 type TodayPageProps = {
   searchParams: Promise<{
@@ -55,31 +23,18 @@ type TodayPageProps = {
   }>;
 };
 
-type TaskCardProps = {
-  categories: Category[];
-  category?: Category;
-  isOverdue?: boolean;
-  task: Task;
-};
-
 type TaskSectionProps = {
   categories: Category[];
   categoriesById: Map<string, Category>;
   description: string;
   emptyMessage: string;
+  id?: string;
   isOverdue?: boolean;
   label: string;
   tasks: Task[];
   title: string;
+  todayDate: string;
 };
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T00:00:00Z`));
-}
 
 function formatLongDate(date: string) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -90,193 +45,26 @@ function formatLongDate(date: string) {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-function TaskCard({
-  categories,
-  category,
-  isOverdue = false,
-  task,
-}: TaskCardProps) {
-  const todayDate = getTodayDateKey();
-  const priorityResult = calculatePriorityScore(task, todayDate);
-  const durationDays = getTaskDurationDays(task);
-  const dailyEstimatedMinutes = Math.round(
-    getTaskDailyEstimatedMinutes(task),
-  );
-
-  return (
-    <article
-      className={`rounded-card border p-5 shadow-[0_12px_35px_rgba(47,36,29,0.05)] sm:p-6 ${
-        isOverdue
-          ? "border-sloth-terracotta/35 bg-sloth-terracotta/5"
-          : "border-sloth-border bg-sloth-card"
-      }`}
-    >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex-1">
-          <div className="flex flex-wrap gap-2 text-xs font-medium">
-            <span
-              className={`rounded-full border px-3 py-1 ${priorityClasses[task.priority]}`}
-            >
-              {priorityLabels[task.priority]}
-            </span>
-            <span className="rounded-full border border-sloth-border px-3 py-1 text-sloth-muted">
-              {statusLabels[task.status]}
-            </span>
-            {category ? (
-              <span className="rounded-full bg-sloth-beige px-3 py-1 text-sloth-forest">
-                {category.name}
-              </span>
-            ) : null}
-          </div>
-
-          <h3 className="mt-4 text-xl font-semibold text-sloth-ink">
-            {task.title}
-          </h3>
-          {task.description ? (
-            <p className="mt-2 leading-7 text-sloth-muted">
-              {task.description}
-            </p>
-          ) : null}
-          {isOverdue ? (
-            <p className="mt-3 text-sm font-medium text-sloth-terracotta">
-              Essa tarefa passou do prazo. Quer reorganizar?
-            </p>
-          ) : null}
-
-          {/* Seção de Prioridade Calculada Explicável */}
-          {task.status !== "done" && task.status !== "archived" && (
-            <details className="mt-4 group/priority text-xs border border-dashed border-sloth-border/50 rounded-2xl bg-sloth-cream/35 p-3.5 max-w-md">
-              <summary className="cursor-pointer list-none flex items-center justify-between text-sloth-muted font-medium hover:text-sloth-forest transition select-none">
-                <span className="flex items-center gap-2">
-                  <svg
-                    className="h-3.5 w-3.5 text-sloth-moss"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                    />
-                  </svg>
-                  Prioridade calculada:{" "}
-                  <strong className="font-semibold text-sloth-ink">
-                    {priorityResult.score} pts
-                  </strong>
-                </span>
-                <span className="text-[10px] text-sloth-muted/70 transition-transform group-open/priority:rotate-180">
-                  ▼
-                </span>
-              </summary>
-              <ul className="mt-2.5 space-y-1.5 text-sloth-muted leading-relaxed">
-                {priorityResult.reasons.map((reason, idx) => (
-                  <li
-                    className="flex items-center justify-between gap-4 border-b border-sloth-border/20 pb-1 last:border-0 last:pb-0"
-                    key={idx}
-                  >
-                    <span>{reason.description}</span>
-                    <span
-                      className={`font-semibold shrink-0 ${
-                        reason.points >= 0
-                          ? "text-sloth-leaf"
-                          : "text-sloth-terracotta"
-                      }`}
-                    >
-                      {reason.points >= 0 ? `+${reason.points}` : reason.points}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-        </div>
-
-        <div className="shrink-0 text-sm text-sloth-muted">
-          <p>Prazo: {formatDate(task.dueDate)}</p>
-          {task.dueTime ? <p>Às {task.dueTime.slice(0, 5)}</p> : null}
-          {task.estimatedMinutes !== null ? (
-            durationDays > 1 ? (
-              <>
-                <p>{formatEstimatedMinutes(dailyEstimatedMinutes)} por dia</p>
-                <p>
-                  {formatEstimatedMinutes(task.estimatedMinutes)} em{" "}
-                  {durationDays} dias
-                </p>
-              </>
-            ) : (
-              <p>{formatEstimatedMinutes(task.estimatedMinutes)} estimados</p>
-            )
-          ) : (
-            <p>Sem estimativa</p>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-sloth-border/70 pt-4">
-        <TaskStatusControl
-          returnTo="today"
-          status={task.status}
-          taskId={task.id}
-        />
-
-        <details className="group relative">
-          <summary className="inline-flex min-h-10 cursor-pointer list-none items-center rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-medium text-sloth-forest transition hover:bg-sloth-beige">
-            Editar
-          </summary>
-          <div className="absolute left-0 top-full z-20 mt-3 w-[min(42rem,calc(100vw-3rem))] rounded-2xl border border-sloth-border bg-sloth-card p-4 shadow-soft sm:p-5">
-            <TaskForm
-              action={updateTaskAction}
-              categories={categories}
-              submitLabel="Salvar alterações"
-              task={task}
-            />
-          </div>
-        </details>
-
-        {task.status !== "archived" ? (
-          <form action={archiveTaskAction}>
-            <input name="taskId" type="hidden" value={task.id} />
-            <button
-              className="min-h-10 rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-medium text-sloth-muted transition hover:bg-sloth-beige"
-              type="submit"
-            >
-              Arquivar
-            </button>
-          </form>
-        ) : null}
-
-        <DeleteTaskControl taskId={task.id} taskTitle={task.title} />
-
-        <Link
-          className="ml-auto inline-flex min-h-10 items-center rounded-xl bg-sloth-moss px-4 text-sm font-semibold text-white transition hover:bg-sloth-forest"
-          href={`/tasks/${task.id}`}
-        >
-          Ver detalhes e subtarefas
-        </Link>
-      </div>
-    </article>
-  );
-}
-
 function TaskSection({
   categories,
   categoriesById,
   description,
   emptyMessage,
+  id,
   isOverdue = false,
   label,
   tasks,
   title,
+  todayDate,
 }: TaskSectionProps) {
   return (
     <section
-      className={`rounded-card border p-5 sm:p-7 ${
+      className={`scroll-mt-6 rounded-card border p-5 sm:p-7 ${
         isOverdue
           ? "border-sloth-terracotta/30 bg-sloth-terracotta/5"
           : "border-sloth-border bg-sloth-card/55"
       }`}
+      id={id}
     >
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -304,13 +92,14 @@ function TaskSection({
       </div>
 
       {tasks.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="grid gap-2">
           {tasks.map((task) => (
-            <TaskCard
+            <TaskRow
               categories={categories}
               category={categoriesById.get(task.categoryId)}
               isOverdue={isOverdue}
               key={task.id}
+              priority={calculatePriorityScore(task, todayDate)}
               task={task}
             />
           ))}
@@ -429,6 +218,16 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
                 ? "O espaço de hoje está livre"
                 : "Passos que pedem atenção agora"}
             </p>
+            {groups.overdue.length > 0 ? (
+              <a
+                className="mt-2 inline-flex text-sm font-medium text-sloth-terracotta underline-offset-2 hover:underline"
+                href="#atrasadas"
+              >
+                {groups.overdue.length === 1
+                  ? "1 atrasada, mais abaixo ↓"
+                  : `${groups.overdue.length} atrasadas, mais abaixo ↓`}
+              </a>
+            ) : null}
           </article>
 
           <article className="rounded-card border border-sloth-border bg-sloth-card p-6">
@@ -450,22 +249,26 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
           <TaskSection
             categories={categories}
             categoriesById={categoriesById}
-            description="Prazos que passaram e ainda estão abertos"
-            emptyMessage="Nada atrasado. O dia começa mais leve."
-            isOverdue
-            label="Atenção!"
-            tasks={groups.overdue}
-            title="Tarefas atrasadas"
+            description="Tarefas previstas para hoje, inclusive as que atravessam mais de um dia."
+            emptyMessage="Nenhuma tarefa prevista para hoje."
+            id="hoje"
+            label="Agora"
+            tasks={groups.today}
+            title="Tarefas de hoje"
+            todayDate={todayDate}
           />
 
           <TaskSection
             categories={categories}
             categoriesById={categoriesById}
-            description="Tarefas previstas para hoje, inclusive as que atravessam mais de um dia."
-            emptyMessage="Nenhuma tarefa prevista para hoje."
-            label="Agora"
-            tasks={groups.today}
-            title="Tarefas de hoje"
+            description="Prazos que passaram e ainda estão abertos"
+            emptyMessage="Nada atrasado. O dia começa mais leve."
+            id="atrasadas"
+            isOverdue
+            label="Atenção!"
+            tasks={groups.overdue}
+            title="Tarefas atrasadas"
+            todayDate={todayDate}
           />
 
           <TaskSection
@@ -476,6 +279,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             label="No horizonte"
             tasks={groups.upcoming}
             title="Próximas tarefas"
+            todayDate={todayDate}
           />
         </div>
 
@@ -486,12 +290,13 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
                 Concluídas e arquivadas (
                 {groups.completed.length + groups.archived.length})
               </summary>
-              <div className="mt-4 grid gap-4 opacity-85">
+              <div className="mt-4 grid gap-2">
                 {[...groups.completed, ...groups.archived].map((task) => (
-                  <TaskCard
+                  <TaskRow
                     categories={categories}
                     category={categoriesById.get(task.categoryId)}
                     key={task.id}
+                    priority={calculatePriorityScore(task, todayDate)}
                     task={task}
                   />
                 ))}

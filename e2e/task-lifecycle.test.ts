@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   createTaskByForm,
+  expectToast,
   readLeafBalance,
   taskCard,
   todayKey,
@@ -19,10 +20,7 @@ test.describe("ciclo de vida da tarefa", () => {
     await createTaskByForm(page, { title, dueDate: todayKey() });
 
     const card = taskCard(page, title);
-    await card
-      .getByLabel("Status da tarefa")
-      .selectOption({ label: "Feita" });
-    await card.getByRole("button", { name: "Aplicar" }).click();
+    await card.getByRole("button", { name: "Concluir tarefa", exact: true }).click();
 
     await expect(
       page.getByRole("status").filter({ hasText: "Folhinhas" }),
@@ -32,22 +30,61 @@ test.describe("ciclo de vida da tarefa", () => {
     expect(await readLeafBalance(page)).toBeGreaterThan(balanceBefore);
   });
 
-  test("mudar status atualiza o cartão", async ({ page }) => {
+  test("mudar status pelo seletor atualiza a linha sem sair da tela", async ({
+    page,
+  }) => {
     const title = uniqueTitle("Em andamento");
     await createTaskByForm(page, { title, dueDate: todayKey() });
 
     const card = taskCard(page, title);
     await card
       .getByLabel("Status da tarefa")
-      .selectOption({ label: "Em andamento" });
-    await card.getByRole("button", { name: "Aplicar" }).click();
+      .selectOption({ label: "Aguardando" });
 
+    await expectToast(page, "Status atualizado");
+    await expect(page).toHaveURL(/\/today$/);
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue("waiting");
+  });
+
+  test("iniciar tarefa com um clique e desfazer", async ({ page }) => {
+    const title = uniqueTitle("Iniciar e desfazer");
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+
+    const card = taskCard(page, title);
+    await card.getByRole("button", { name: "Iniciar tarefa", exact: true }).click();
+
+    await expectToast(page, "Status atualizado");
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue(
+      "in_progress",
+    );
     await expect(
-      page.getByRole("status").filter({ hasText: "Status atualizado." }),
-    ).toBeVisible();
+      card.getByRole("button", { name: "Iniciar tarefa", exact: true }),
+    ).toBeHidden();
+
+    await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+
+    await expectToast(page, "Desfeito");
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue("todo");
+  });
+
+  test("concluir pode ser desfeito", async ({ page }) => {
+    const title = uniqueTitle("Concluir e desfazer");
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+
+    await taskCard(page, title)
+      .getByRole("button", { name: "Concluir tarefa", exact: true })
+      .click();
+    await expectToast(page, "Tarefa concluída");
+    await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+    await expectToast(page, "Desfeito");
+
+    const card = taskCard(page, title);
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue("todo");
     await expect(
-      card.locator("span").filter({ hasText: /^Em andamento$/ }),
-    ).toBeVisible();
+      page.locator("section").filter({
+        has: page.getByRole("heading", { name: "Tarefas de hoje" }),
+      }),
+    ).toContainText(title);
   });
 
   test("tarefa concluída fica em Concluídas e arquivadas", async ({
@@ -57,8 +94,7 @@ test.describe("ciclo de vida da tarefa", () => {
     await createTaskByForm(page, { title, dueDate: todayKey() });
 
     const card = taskCard(page, title);
-    await card.getByLabel("Status da tarefa").selectOption({ label: "Feita" });
-    await card.getByRole("button", { name: "Aplicar" }).click();
+    await card.getByRole("button", { name: "Concluir tarefa", exact: true }).click();
 
     await expect(
       page.getByRole("status").filter({ hasText: "Folhinhas" }),
@@ -71,6 +107,21 @@ test.describe("ciclo de vida da tarefa", () => {
     await expect(taskCard(page, title)).toBeVisible();
   });
 
+  test("editar tarefa dentro da linha e salvar", async ({ page }) => {
+    const title = uniqueTitle("Editar tarefa");
+    const newTitle = `${title} editada`;
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+
+    const card = taskCard(page, title);
+    await card.getByRole("button", { name: "Mostrar detalhes" }).click();
+    await card.getByRole("button", { name: "Editar", exact: true }).click();
+    await card.getByLabel("Título").fill(newTitle);
+    await card.getByRole("button", { name: "Salvar alterações" }).click();
+
+    await expectToast(page, "Tarefa atualizada");
+    await expect(taskCard(page, newTitle)).toBeVisible();
+  });
+
   test("arquivar tarefa move para Concluídas e arquivadas", async ({
     page,
   }) => {
@@ -78,11 +129,10 @@ test.describe("ciclo de vida da tarefa", () => {
     await createTaskByForm(page, { title, dueDate: todayKey() });
 
     const card = taskCard(page, title);
-    await card.getByRole("button", { name: "Arquivar" }).click();
+    await card.getByRole("button", { name: "Mostrar detalhes" }).click();
+    await card.getByRole("button", { name: "Arquivar", exact: true }).click();
 
-    await expect(
-      page.getByRole("status").filter({ hasText: "Tarefa arquivada." }),
-    ).toBeVisible();
+    await expectToast(page, "Tarefa arquivada");
 
     await page
       .locator("summary")
@@ -96,7 +146,8 @@ test.describe("ciclo de vida da tarefa", () => {
     await createTaskByForm(page, { title, dueDate: todayKey() });
 
     const card = taskCard(page, title);
-    await card.getByText("Excluir", { exact: true }).click();
+    await card.getByRole("button", { name: "Mostrar detalhes" }).click();
+    await card.getByRole("button", { name: "Excluir", exact: true }).click();
     await expect(
       card.getByText("Excluir permanentemente?"),
     ).toBeVisible();
@@ -104,9 +155,7 @@ test.describe("ciclo de vida da tarefa", () => {
       .getByRole("button", { name: "Confirmar exclusão" })
       .click();
 
-    await expect(
-      page.getByRole("status").filter({ hasText: "Tarefa excluída." }),
-    ).toBeVisible();
+    await expectToast(page, "Tarefa excluída");
     await expect(taskCard(page, title)).toBeHidden();
   });
 });

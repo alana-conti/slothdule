@@ -30,14 +30,29 @@ test.describe("tela Hoje", () => {
 
     const card = taskCard(page, title);
     await expect(card).toBeVisible();
-    await expect(
-      card.getByText("Essa tarefa passou do prazo. Quer reorganizar?"),
-    ).toBeVisible();
+    await expect(card.getByText("Passou do prazo")).toBeVisible();
     await expect(
       page
         .locator("section")
         .filter({ has: page.getByRole("heading", { name: "Tarefas atrasadas" }) }),
     ).toContainText(title);
+  });
+
+  test("tarefas de hoje vêm antes das atrasadas", async ({ page }) => {
+    const title = uniqueTitle("Ordem das seções");
+    await createTaskByForm(page, { title, dueDate: todayKey(-1) });
+
+    const headings = await page
+      .getByRole("heading", { level: 2 })
+      .allTextContents();
+
+    expect(headings.indexOf("Tarefas de hoje")).toBeGreaterThanOrEqual(0);
+    expect(headings.indexOf("Tarefas de hoje")).toBeLessThan(
+      headings.indexOf("Tarefas atrasadas"),
+    );
+    await expect(
+      page.getByRole("link", { name: /atrasadas?, mais abaixo/ }),
+    ).toBeVisible();
   });
 
   test("tarefa futura aparece em Próximas tarefas", async ({ page }) => {
