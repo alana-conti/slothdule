@@ -19,6 +19,7 @@ function createTask(overrides: Partial<Task>): Task {
     estimatedMinutes: null,
     completedAt: null,
     leafAwardedAt: null,
+    pauseReason: null,
     clientId: null,
     projectId: null,
     createdAt: "2026-06-12T10:00:00Z",

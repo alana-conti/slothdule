@@ -67,6 +67,132 @@ test.describe("ciclo de vida da tarefa", () => {
     await expect(card.getByLabel("Status da tarefa")).toHaveValue("todo");
   });
 
+  test("em andamento vai para a área Em foco agora dentro de Hoje; pausar vai para aguardando e retomar volta", async ({
+    page,
+  }) => {
+    const title = uniqueTitle("Foco e pausa");
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+
+    const hoje = page.locator("section").filter({
+      has: page.getByRole("heading", { name: "Tarefas de hoje", exact: true }),
+    });
+    const focus = page.getByRole("region", { name: "Em foco agora" });
+    await expect(focus.filter({ hasText: title })).toHaveCount(0);
+
+    await taskCard(page, title)
+      .getByRole("button", { name: "Iniciar tarefa", exact: true })
+      .click();
+
+    // A área de foco fica dentro da seção Hoje, não é outra seção.
+    await expect(hoje.getByRole("region", { name: "Em foco agora" })).toContainText(
+      title,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Em foco agora" }),
+    ).toHaveCount(0);
+
+    const card = taskCard(page, title);
+    await card
+      .getByRole("button", { name: "Pausar tarefa", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Quer deixar um recado?" })
+      .getByRole("button", { name: "Pausar", exact: true })
+      .click();
+
+    await expectToast(page, "Tarefa pausada");
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue("waiting");
+    await expect(focus.filter({ hasText: title })).toHaveCount(0);
+    await expect(hoje).toContainText(title);
+
+    await card
+      .getByRole("button", { name: "Retomar tarefa", exact: true })
+      .click();
+
+    await expectToast(page, "Tarefa retomada");
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue(
+      "in_progress",
+    );
+    await expect(focus).toContainText(title);
+  });
+
+  test("pausar pede um recado opcional; Enter pausa com o motivo e ele aparece na linha", async ({
+    page,
+  }) => {
+    const title = uniqueTitle("Pausa com motivo");
+    const reason = "esperando o retorno da Ana";
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+
+    const card = taskCard(page, title);
+    await card
+      .getByRole("button", { name: "Iniciar tarefa", exact: true })
+      .click();
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue(
+      "in_progress",
+    );
+
+    await card
+      .getByRole("button", { name: "Pausar tarefa", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Quer deixar um recado?" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel("Motivo da pausa (opcional)")).toBeFocused();
+
+    await page.keyboard.type(reason);
+    await page.keyboard.press("Enter");
+
+    await expect(dialog).toBeHidden();
+    await expectToast(page, "Tarefa pausada");
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue("waiting");
+    await expect(card).toContainText(`Em pausa: ${reason}`);
+
+    // O recado sobrevive ao recarregamento e some quando a tarefa é retomada.
+    await page.reload();
+    await expect(taskCard(page, title)).toContainText(`Em pausa: ${reason}`);
+    await taskCard(page, title)
+      .getByRole("button", { name: "Retomar tarefa", exact: true })
+      .click();
+    await expect(taskCard(page, title)).not.toContainText("Em pausa:");
+  });
+
+  test("Enter sem escrever nada também pausa; Esc cancela e mantém em andamento", async ({
+    page,
+  }) => {
+    const title = uniqueTitle("Pausa sem motivo");
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+
+    const card = taskCard(page, title);
+    await card
+      .getByRole("button", { name: "Iniciar tarefa", exact: true })
+      .click();
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue(
+      "in_progress",
+    );
+
+    const dialog = page.getByRole("dialog", { name: "Quer deixar um recado?" });
+
+    await card
+      .getByRole("button", { name: "Pausar tarefa", exact: true })
+      .click();
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue(
+      "in_progress",
+    );
+
+    await card
+      .getByRole("button", { name: "Pausar tarefa", exact: true })
+      .click();
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Enter");
+
+    await expect(dialog).toBeHidden();
+    await expectToast(page, "Tarefa pausada");
+    await expect(card.getByLabel("Status da tarefa")).toHaveValue("waiting");
+    await expect(card).not.toContainText("Em pausa:");
+  });
+
   test("concluir pode ser desfeito", async ({ page }) => {
     const title = uniqueTitle("Concluir e desfazer");
     await createTaskByForm(page, { title, dueDate: todayKey() });

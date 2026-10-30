@@ -39,6 +39,7 @@ type TaskRow = {
   estimated_minutes: number | null;
   completed_at: string | null;
   leaf_awarded_at: string | null;
+  pause_reason: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -87,6 +88,7 @@ function mapTask(row: TaskRow): Task {
     estimatedMinutes: row.estimated_minutes,
     completedAt: row.completed_at,
     leafAwardedAt: row.leaf_awarded_at,
+    pauseReason: row.pause_reason,
     clientId: row.client_id,
     projectId: row.project_id,
     createdAt: row.created_at,
@@ -119,6 +121,10 @@ function toTaskPayload(input: TaskInput) {
     due_date: input.dueDate,
     due_time: input.dueTime,
     estimated_minutes: input.estimatedMinutes,
+    // Só vai quando informado: sem o campo, o backend preserva o recado atual.
+    ...(input.pauseReason !== undefined
+      ? { pause_reason: input.pauseReason }
+      : {}),
   };
 }
 

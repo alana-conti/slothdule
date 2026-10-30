@@ -24,6 +24,7 @@ function createTask(overrides: Partial<Task> = {}): Task {
     estimatedMinutes: 60,
     completedAt: null,
     leafAwardedAt: null,
+    pauseReason: null,
     clientId: null,
     projectId: null,
     createdAt: "2026-06-10T12:00:00Z",
@@ -64,6 +65,44 @@ describe("groupTasksForToday", () => {
 
     expect(groups.overdue).toEqual([task]);
     expect(groups.today).toEqual([]);
+  });
+});
+
+describe("tarefas em andamento", () => {
+  const today = "2026-06-12";
+
+  it("reúne as tarefas em andamento de qualquer data, sem as pausadas", () => {
+    const overdue = createTask({
+      id: "overdue",
+      status: "in_progress",
+      dueDate: "2026-06-10",
+    });
+    const current = createTask({ id: "current", status: "in_progress" });
+    const upcoming = createTask({
+      id: "upcoming",
+      status: "in_progress",
+      dueDate: "2026-06-20",
+    });
+    const waiting = createTask({ id: "waiting", status: "waiting" });
+    const done = createTask({ id: "done", status: "done" });
+
+    const ids = groupTasksForToday(
+      [upcoming, waiting, done, current, overdue],
+      today,
+    ).inProgress.map((task) => task.id);
+
+    expect(ids).toHaveLength(3);
+    expect(ids).toEqual(
+      expect.arrayContaining(["overdue", "current", "upcoming"]),
+    );
+  });
+
+  it("mantém a tarefa em andamento também no grupo da sua data", () => {
+    const task = createTask({ status: "in_progress" });
+    const groups = groupTasksForToday([task], today);
+
+    expect(groups.inProgress).toEqual([task]);
+    expect(groups.today).toEqual([task]);
   });
 });
 

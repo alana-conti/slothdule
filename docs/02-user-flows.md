@@ -7,7 +7,7 @@ Usuário abre o Slothdule
 ↓
 Tela Hoje é exibida
 ↓
-Usuário vê tarefas de hoje, depois as atrasadas (com um aviso "N atrasadas" no resumo do topo), e a carga estimada
+Usuário vê "Em foco agora" (o que já está em andamento, de qualquer data), tarefas de hoje, depois as atrasadas (com um aviso "N atrasadas" no resumo do topo), e a carga estimada
 ↓
 Usuário identifica a tarefa mais urgente
 ↓
@@ -27,6 +27,8 @@ O usuário deve entender em menos de 30 segundos:
 
 Cada tarefa é uma linha, não um card grande: círculo para concluir, título, prioridade, categoria, prazo e estimativa, botão ▶ para iniciar e seletor de status. Clicar no título (ou na seta) abre os detalhes na própria linha: descrição, prioridade calculada, Editar, Arquivar, Excluir e link para a tela da tarefa.
 
+- **Em foco agora:** uma área pequena no alto da seção "Tarefas de hoje" reúne o que está em andamento (de qualquer data, inclusive atrasadas), em linha com "uma coisa de cada vez". Quem está em foco sai da lista abaixo; a área só aparece quando há algo em andamento.
+- **Iniciar, pausar e retomar:** o botão ▶ inicia (A fazer → Em andamento). Em uma tarefa em andamento ele vira ❚❚; ao clicar, abre um pop-up com um campo opcional "Motivo da pausa" (por exemplo, "esperando o retorno da Ana"). **Enter** pausa, com ou sem recado; Esc ou Cancelar mantém a tarefa em andamento. A tarefa vai para Aguardando e o recado aparece na linha ("Em pausa: …"). Em uma tarefa aguardando o botão volta a ▶ e retoma (Em andamento), apagando o recado. Trocar para "Aguardando" pelo seletor não pede recado.
 - Mudar o status é um clique (círculo, ▶ ou seletor), sem botão "Aplicar" e sem recarregar: a tela e o scroll ficam como estão.
 - A confirmação aparece como toast; concluir, iniciar, mudar status e arquivar oferecem **Desfazer**, que devolve o status anterior. As Folhinhas já ganhas por uma conclusão não são retiradas ao desfazer, e reconcluir a mesma tarefa não rende Folhinhas de novo.
 - Editar acontece dentro da linha; excluir pede confirmação na linha.

@@ -4,6 +4,8 @@ import type { Task } from "@/types/tasks";
 export const OPEN_TASK_STATUSES = ["todo", "in_progress", "waiting"] as const;
 
 export type TodayTaskGroups = {
+  /** Tarefas em andamento, de qualquer data. Também aparecem no grupo da sua data. */
+  inProgress: Task[];
   overdue: Task[];
   today: Task[];
   upcoming: Task[];
@@ -84,6 +86,13 @@ export function groupTasksForToday(
     getTaskScheduleStart(task) <= todayDate && task.dueDate >= todayDate;
 
   return {
+    inProgress: openTasks
+      .filter((task) => task.status === "in_progress")
+      .sort((a, b) =>
+        compareByScore(a, b, todayDate, (l, r) =>
+          l.dueDate.localeCompare(r.dueDate),
+        ),
+      ),
     overdue: openTasks
       .filter((task) => task.dueDate < todayDate)
       .sort((a, b) =>

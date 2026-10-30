@@ -269,6 +269,9 @@ class Task(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     leaf_awarded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sort_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Recado opcional de quando a tarefa foi pausada (status `waiting`), p.ex.
+    # "esperando o retorno da Ana". Só faz sentido enquanto está aguardando.
+    pause_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=_now(), nullable=False
     )

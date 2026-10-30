@@ -103,10 +103,13 @@ class TaskIn(BaseModel):
     estimated_minutes: int | None = Field(default=None, ge=0)
     client_id: UUID | None = None
     project_id: UUID | None = None
+    # Só é aplicado quando enviado (o PATCH sem o campo preserva o recado).
+    pause_reason: str | None = Field(default=None, max_length=500)
 
 
 class TaskStatusIn(BaseModel):
     status: TaskStatus
+    pause_reason: str | None = Field(default=None, max_length=500)
 
 
 class TaskOut(BaseModel):
@@ -126,6 +129,7 @@ class TaskOut(BaseModel):
     estimated_minutes: int | None = None
     completed_at: datetime | None = None
     leaf_awarded_at: datetime | None = None
+    pause_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -28,6 +28,8 @@ type TaskSectionProps = {
   categoriesById: Map<string, Category>;
   description: string;
   emptyMessage: string;
+  /** Em andamento: ficam numa área pequena "Em foco agora" no alto da seção. */
+  focusTasks?: Task[];
   id?: string;
   isOverdue?: boolean;
   label: string;
@@ -50,6 +52,7 @@ function TaskSection({
   categoriesById,
   description,
   emptyMessage,
+  focusTasks = [],
   id,
   isOverdue = false,
   label,
@@ -87,9 +90,34 @@ function TaskSection({
               : "bg-sloth-beige text-sloth-forest"
           }`}
         >
-          {tasks.length}
+          {tasks.length + focusTasks.length}
         </span>
       </div>
+
+      {focusTasks.length > 0 ? (
+        <div
+          aria-label="Em foco agora"
+          className="mb-4 rounded-2xl border border-sloth-moss/30 bg-sloth-moss/5 p-3"
+          role="region"
+        >
+          <p className="mb-2 px-1 text-xs font-semibold tracking-[0.14em] text-sloth-moss uppercase">
+            Em foco agora
+          </p>
+          <div className="grid gap-2">
+            {focusTasks.map((task) => (
+              <TaskRow
+                categories={categories}
+                category={categoriesById.get(task.categoryId)}
+                // Em foco pode vir de qualquer data: o atraso continua visível.
+                isOverdue={task.dueDate < todayDate}
+                key={task.id}
+                priority={calculatePriorityScore(task, todayDate)}
+                task={task}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {tasks.length > 0 ? (
         <div className="grid gap-2">
@@ -104,11 +132,11 @@ function TaskSection({
             />
           ))}
         </div>
-      ) : (
+      ) : focusTasks.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-sloth-border bg-sloth-card px-5 py-7 text-center text-sm text-sloth-muted">
           {emptyMessage}
         </p>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -136,6 +164,12 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
   const criticalToday = groups.today.filter(
     (task) => task.priority === "critical",
   ).length;
+  // Quem está em andamento vai para a área "Em foco agora" dentro de Hoje e sai
+  // da lista da sua data.
+  const notInProgress = (task: Task) => task.status !== "in_progress";
+  const todayRest = groups.today.filter(notInProgress);
+  const overdueRest = groups.overdue.filter(notInProgress);
+  const upcomingRest = groups.upcoming.filter(notInProgress);
   const categoriesById = new Map(
     categories.map((category) => [category.id, category]),
   );
@@ -218,14 +252,14 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
                 ? "O espaço de hoje está livre"
                 : "Passos que pedem atenção agora"}
             </p>
-            {groups.overdue.length > 0 ? (
+            {overdueRest.length > 0 ? (
               <a
                 className="mt-2 inline-flex text-sm font-medium text-sloth-terracotta underline-offset-2 hover:underline"
                 href="#atrasadas"
               >
-                {groups.overdue.length === 1
+                {overdueRest.length === 1
                   ? "1 atrasada, mais abaixo ↓"
-                  : `${groups.overdue.length} atrasadas, mais abaixo ↓`}
+                  : `${overdueRest.length} atrasadas, mais abaixo ↓`}
               </a>
             ) : null}
           </article>
@@ -251,9 +285,10 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             categoriesById={categoriesById}
             description="Tarefas previstas para hoje, inclusive as que atravessam mais de um dia."
             emptyMessage="Nenhuma tarefa prevista para hoje."
+            focusTasks={groups.inProgress}
             id="hoje"
             label="Agora"
-            tasks={groups.today}
+            tasks={todayRest}
             title="Tarefas de hoje"
             todayDate={todayDate}
           />
@@ -266,7 +301,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             id="atrasadas"
             isOverdue
             label="Atenção!"
-            tasks={groups.overdue}
+            tasks={overdueRest}
             title="Tarefas atrasadas"
             todayDate={todayDate}
           />
@@ -277,7 +312,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             description="Entregas futuras, ordenadas pelo prazo."
             emptyMessage="Nenhuma próxima tarefa por enquanto."
             label="No horizonte"
-            tasks={groups.upcoming}
+            tasks={upcomingRest}
             title="Próximas tarefas"
             todayDate={todayDate}
           />

@@ -40,6 +40,27 @@ def _validate_relations(db: Session, user_id, payload: schemas.TaskIn) -> None:
             raise HTTPException(status_code=400, detail="Projeto inválido.")
 
 
+def _apply_pause_reason(
+    task: models.Task,
+    previous_status: models.TaskStatus,
+    reason: str | None,
+    *,
+    sent: bool,
+) -> None:
+    """O recado de pausa só existe enquanto a tarefa está em `waiting`.
+
+    Fora de `waiting` ele é limpo. Em `waiting`, só é trocado quando o cliente
+    envia o campo (vazio vira nulo); caso contrário, o recado anterior fica —
+    exceto se a tarefa acabou de entrar em `waiting`, aí começa sem recado.
+    """
+    if task.status != models.TaskStatus.waiting:
+        task.pause_reason = None
+    elif sent:
+        task.pause_reason = (reason or "").strip() or None
+    elif previous_status != models.TaskStatus.waiting:
+        task.pause_reason = None
+
+
 @router.get("", response_model=list[schemas.TaskOut])
 def list_tasks(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     return (
@@ -98,6 +119,7 @@ def update_task(
 ):
     task = require_owned_task(db, user.id, task_id)
     _validate_relations(db, user.id, payload)
+    previous_status = task.status
     was_done_awarded = task.leaf_awarded_at is not None
     keep_completed_at = (
         payload.status == models.TaskStatus.done
@@ -116,6 +138,12 @@ def update_task(
     task.due_date = payload.due_date
     task.due_time = payload.due_time
     task.estimated_minutes = payload.estimated_minutes
+    _apply_pause_reason(
+        task,
+        previous_status,
+        payload.pause_reason,
+        sent="pause_reason" in payload.model_fields_set,
+    )
     task.completed_at = (
         task.completed_at
         if keep_completed_at
@@ -137,6 +165,7 @@ def update_task_status(
     user: models.User = Depends(get_current_user),
 ):
     task = require_owned_task(db, user.id, task_id)
+    previous_status = task.status
     was_done_awarded = task.leaf_awarded_at is not None
     keep_completed_at = (
         payload.status == models.TaskStatus.done
@@ -144,6 +173,12 @@ def update_task_status(
         and task.completed_at is not None
     )
     task.status = payload.status
+    _apply_pause_reason(
+        task,
+        previous_status,
+        payload.pause_reason,
+        sent="pause_reason" in payload.model_fields_set,
+    )
     if payload.status == models.TaskStatus.done and not keep_completed_at:
         task.completed_at = datetime.now(timezone.utc)
     elif payload.status != models.TaskStatus.done:

@@ -166,6 +166,72 @@ def test_status_transitions(user_client):
     assert r.json()["completed_at"] is None
 
 
+def test_pause_reason_is_kept_while_waiting_and_cleared_after(user_client):
+    task = make_task(user_client)
+    task_id = task["id"]
+    assert task["pause_reason"] is None
+
+    r = user_client.post(
+        f"/tasks/{task_id}/status",
+        json={"status": "waiting", "pause_reason": "  esperando o retorno da Ana  "},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["pause_reason"] == "esperando o retorno da Ana"
+
+    # Reenviar o status sem o campo (ou editar via PATCH sem ele) preserva o recado.
+    r = user_client.post(f"/tasks/{task_id}/status", json={"status": "waiting"})
+    assert r.json()["pause_reason"] == "esperando o retorno da Ana"
+    r = user_client.patch(
+        f"/tasks/{task_id}",
+        json=full_task_payload(r.json(), title="Outro título"),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "waiting"
+    assert r.json()["pause_reason"] == "esperando o retorno da Ana"
+
+    # Retomar limpa o recado.
+    r = user_client.post(f"/tasks/{task_id}/status", json={"status": "in_progress"})
+    assert r.json()["pause_reason"] is None
+
+
+def test_pause_reason_blank_becomes_null_and_other_statuses_ignore_it(user_client):
+    task = make_task(user_client)
+    task_id = task["id"]
+
+    r = user_client.post(
+        f"/tasks/{task_id}/status", json={"status": "waiting", "pause_reason": "   "}
+    )
+    assert r.json()["pause_reason"] is None
+
+    r = user_client.post(
+        f"/tasks/{task_id}/status",
+        json={"status": "in_progress", "pause_reason": "não deveria ficar"},
+    )
+    assert r.json()["pause_reason"] is None
+
+    # Entrar em waiting por PATCH sem o campo começa sem recado.
+    r = user_client.patch(
+        f"/tasks/{task_id}", json=full_task_payload(r.json(), status="waiting")
+    )
+    assert r.json()["pause_reason"] is None
+
+    # PATCH com o campo define o recado.
+    r = user_client.patch(
+        f"/tasks/{task_id}",
+        json=full_task_payload(r.json(), status="waiting", pause_reason="aguardando o cliente"),
+    )
+    assert r.json()["pause_reason"] == "aguardando o cliente"
+
+
+def test_pause_reason_rejects_too_long(user_client):
+    task = make_task(user_client)
+    r = user_client.post(
+        f"/tasks/{task['id']}/status",
+        json={"status": "waiting", "pause_reason": "x" * 501},
+    )
+    assert r.status_code == 422
+
+
 def test_status_rejects_invalid(user_client):
     task = make_task(user_client)
     r = user_client.post(f"/tasks/{task['id']}/status", json={"status": "flying"})

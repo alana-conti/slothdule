@@ -160,7 +160,11 @@ function errorMessage(error: unknown, fallback: string) {
 }
 
 /** Muda só o status, preservando o resto da tarefa. */
-async function applyTaskStatus(taskId: string, status: string) {
+async function applyTaskStatus(
+  taskId: string,
+  status: string,
+  pauseReason?: string | null,
+) {
   if (!taskStatuses.includes(status as TaskInput["status"])) {
     throw new Error("Status inválido.");
   }
@@ -182,6 +186,7 @@ async function applyTaskStatus(taskId: string, status: string) {
     dueDate: task.dueDate,
     dueTime: task.dueTime,
     estimatedMinutes: task.estimatedMinutes,
+    pauseReason,
   });
 
   return { title: task.title, leavesAwarded: result.leavesAwarded };
@@ -210,9 +215,11 @@ export async function updateTaskAction(
 export async function changeTaskStatusAction(
   taskId: string,
   status: string,
+  /** Só vale ao ir para "aguardando": o motivo da pausa (opcional). */
+  pauseReason?: string | null,
 ): Promise<TaskActionResult> {
   try {
-    const result = await applyTaskStatus(taskId, status);
+    const result = await applyTaskStatus(taskId, status, pauseReason);
 
     revalidatePath("/", "layout");
 

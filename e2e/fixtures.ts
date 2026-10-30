@@ -46,6 +46,8 @@ export async function createTaskByForm(
   options: { title: string; dueDate: string },
 ) {
   await page.goto("/today");
+  // Sem hidratar, o clique no botão (ou a tecla N) não faz nada.
+  await page.waitForLoadState("networkidle");
 
   await page.getByRole("button", { name: "Nova tarefa" }).click();
   const section = page.getByRole("dialog", { name: "O que precisa sair da cabeça?" });

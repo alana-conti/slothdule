@@ -38,6 +38,8 @@ export type Task = {
   estimatedMinutes: number | null;
   completedAt: string | null;
   leafAwardedAt: string | null;
+  /** Recado de quando a tarefa foi pausada (só enquanto está aguardando). */
+  pauseReason: string | null;
   clientId: string | null;
   projectId: string | null;
   createdAt: string;
@@ -55,6 +57,8 @@ export type TaskInput = {
   dueDate: string;
   dueTime: string | null;
   estimatedMinutes: number | null;
+  /** Omitido = não mexer no recado atual; `null` = limpar. */
+  pauseReason?: string | null;
 };
 
 export type Subtask = {

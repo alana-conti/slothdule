@@ -11,6 +11,7 @@ import {
     removeTaskAction,
     updateTaskAction,
 } from "@/features/tasks/actions";
+import { PauseReasonDialog } from "@/features/tasks/pause-reason-dialog";
 import { TaskForm } from "@/features/tasks/task-form";
 import {
     formatEstimatedMinutes,
@@ -100,6 +101,7 @@ export function TaskRow({
     const [editing, setEditing] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [editError, setEditError] = useState<string | null>(null);
+    const [pausing, setPausing] = useState(false);
     const [pending, startTransition] = useTransition();
     // A linha já reflete o novo status enquanto o servidor responde.
     const [status, setOptimisticStatus] = useOptimistic(task.status);
@@ -107,9 +109,14 @@ export function TaskRow({
     const isFinished = status === "done" || status === "archived";
     const schedule = formatSchedule(task);
 
-    function undoTo(previous: TaskStatus) {
+    function undoTo(previous: TaskStatus, previousReason: string | null) {
         startTransition(async () => {
-            const result = await changeTaskStatusAction(task.id, previous);
+            // Ao voltar para "aguardando", o recado de antes volta junto.
+            const result = await changeTaskStatusAction(
+                task.id,
+                previous,
+                previous === "waiting" ? previousReason : undefined,
+            );
 
             toast(
                 result.ok
@@ -128,17 +135,22 @@ export function TaskRow({
         });
     }
 
-    function changeStatus(next: TaskStatus) {
+    function changeStatus(next: TaskStatus, pauseReason?: string) {
         if (pending || next === status) {
             return;
         }
 
         const previous = task.status;
+        const previousReason = task.pauseReason;
 
         startTransition(async () => {
             setOptimisticStatus(next);
 
-            const result = await changeTaskStatusAction(task.id, next);
+            const result = await changeTaskStatusAction(
+                task.id,
+                next,
+                next === "waiting" ? (pauseReason ?? undefined) : undefined,
+            );
 
             if (!result.ok) {
                 toast({
@@ -151,7 +163,7 @@ export function TaskRow({
 
             const undo = {
                 label: "Desfazer",
-                onClick: () => undoTo(previous),
+                onClick: () => undoTo(previous, previousReason),
             };
 
             if (next === "done") {
@@ -162,6 +174,26 @@ export function TaskRow({
                             ? `“${task.title}” está feita. Uma coisa de cada vez: +${result.leavesAwarded} Folhinhas para você.`
                             : `“${task.title}” está feita.`,
                     title: "Tarefa concluída",
+                });
+                return;
+            }
+
+            if (next === "waiting" && previous === "in_progress") {
+                toast({
+                    action: undo,
+                    description: pauseReason
+                        ? `“${task.title}” está em pausa: ${pauseReason}`
+                        : `“${task.title}” está em pausa. Volte quando der.`,
+                    title: "Tarefa pausada",
+                });
+                return;
+            }
+
+            if (next === "in_progress" && previous === "waiting") {
+                toast({
+                    action: undo,
+                    description: `“${task.title}” voltou para em andamento.`,
+                    title: "Tarefa retomada",
                 });
                 return;
             }
@@ -178,6 +210,7 @@ export function TaskRow({
 
     function archive() {
         const previous = task.status;
+        const previousReason = task.pauseReason;
 
         startTransition(async () => {
             const result = await archiveTaskAction(task.id);
@@ -187,7 +220,8 @@ export function TaskRow({
                     ? {
                           action: {
                               label: "Desfazer",
-                              onClick: () => undoTo(previous),
+                              onClick: () =>
+                                  undoTo(previous, previousReason),
                           },
                           description: `“${task.title}” foi para Concluídas e arquivadas.`,
                           title: "Tarefa arquivada",
@@ -263,11 +297,12 @@ export function TaskRow({
                     aria-label={
                         isFinished ? "Reabrir tarefa" : "Concluir tarefa"
                     }
-                    className={`inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-base transition ${
+                    className={`inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-base transition disabled:cursor-wait disabled:opacity-60 ${
                         status === "done"
                             ? "border-sloth-leaf bg-sloth-leaf text-white"
                             : "border-sloth-border text-transparent hover:border-sloth-moss hover:bg-sloth-moss/10 hover:text-sloth-moss"
                     }`}
+                    disabled={pending}
                     onClick={() => changeStatus(isFinished ? "todo" : "done")}
                     type="button"
                 >
@@ -317,14 +352,37 @@ export function TaskRow({
                             </span>
                         ) : null}
                     </p>
+
+                    {status === "waiting" && task.pauseReason ? (
+                        <p className="mt-1 line-clamp-2 text-xs break-words text-sloth-forest">
+                            <span className="font-semibold">Em pausa:</span>{" "}
+                            {task.pauseReason}
+                        </p>
+                    ) : null}
                 </div>
 
-                {status === "todo" || status === "waiting" ? (
+                {status === "in_progress" ? (
                     <button
-                        aria-label="Iniciar tarefa"
-                        className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sloth-border text-xs text-sloth-forest transition hover:border-sloth-moss hover:bg-sloth-moss/10"
+                        aria-label="Pausar tarefa"
+                        className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sloth-moss/40 bg-sloth-moss/10 text-[11px] text-sloth-forest transition hover:bg-sloth-moss/20 disabled:cursor-wait disabled:opacity-60"
+                        disabled={pending}
+                        onClick={() => setPausing(true)}
+                        title="Pausar"
+                        type="button"
+                    >
+                        <span aria-hidden="true">❚❚</span>
+                    </button>
+                ) : status === "todo" || status === "waiting" ? (
+                    <button
+                        aria-label={
+                            status === "waiting"
+                                ? "Retomar tarefa"
+                                : "Iniciar tarefa"
+                        }
+                        className="inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sloth-border text-xs text-sloth-forest transition hover:border-sloth-moss hover:bg-sloth-moss/10 disabled:cursor-wait disabled:opacity-60"
+                        disabled={pending}
                         onClick={() => changeStatus("in_progress")}
-                        title="Iniciar"
+                        title={status === "waiting" ? "Retomar" : "Iniciar"}
                         type="button"
                     >
                         <span aria-hidden="true">▶</span>
@@ -335,7 +393,8 @@ export function TaskRow({
                     <span className="sr-only">Status da tarefa</span>
                     <select
                         aria-label="Status da tarefa"
-                        className={`min-h-9 cursor-pointer appearance-none rounded-full border py-1 pr-8 pl-3 text-xs font-semibold outline-none transition focus:border-sloth-moss focus-visible:ring-3 focus-visible:ring-sloth-moss/15 ${statusClasses[status]}`}
+                        className={`min-h-9 cursor-pointer appearance-none rounded-full border py-1 pr-8 pl-3 text-xs font-semibold outline-none transition focus:border-sloth-moss focus-visible:ring-3 focus-visible:ring-sloth-moss/15 disabled:cursor-wait disabled:opacity-60 ${statusClasses[status]}`}
+                        disabled={pending}
                         onChange={(event) =>
                             changeStatus(event.target.value as TaskStatus)
                         }
@@ -513,6 +572,17 @@ export function TaskRow({
                         </div>
                     ) : null}
                 </div>
+            ) : null}
+
+            {pausing ? (
+                <PauseReasonDialog
+                    onCancel={() => setPausing(false)}
+                    onConfirm={(reason) => {
+                        setPausing(false);
+                        changeStatus("waiting", reason);
+                    }}
+                    taskTitle={task.title}
+                />
             ) : null}
         </article>
     );

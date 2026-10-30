@@ -161,6 +161,7 @@ Tabela principal.
 | completed_at | timestamptz | preenchido ao concluir |
 | leaf_awarded_at | timestamptz | preenchido quando Folhinhas da conclusão forem geradas |
 | sort_score | integer | score calculado opcional |
+| pause_reason | text | recado opcional de quando a tarefa foi pausada (até 500 caracteres); só existe enquanto o status é `waiting` e é apagado ao sair dele (migration Alembic `0002_task_pause_reason`) |
 | created_at | timestamptz | automático |
 | updated_at | timestamptz | automático |
 
