@@ -86,14 +86,14 @@ export function SubtaskList({ subtasks, taskId }: SubtaskListProps) {
                         : `Concluir ${subtask.title}`
                     }
                     aria-pressed={subtask.isDone}
-                    className={`flex min-h-10 min-w-10 items-center justify-center rounded-xl border text-sm font-semibold transition ${
+                    className={`inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-base transition ${
                       subtask.isDone
-                        ? "border-sloth-leaf bg-sloth-leaf text-sloth-forest"
-                        : "border-sloth-border bg-sloth-card text-sloth-muted hover:bg-sloth-beige"
+                        ? "border-sloth-leaf bg-sloth-leaf text-white"
+                        : "border-sloth-border text-transparent hover:border-sloth-moss hover:bg-sloth-moss/10 hover:text-sloth-moss"
                     }`}
                     type="submit"
                   >
-                    {subtask.isDone ? "Feita" : "Fazer"}
+                    <span aria-hidden="true">✓</span>
                   </button>
                 </form>
 
