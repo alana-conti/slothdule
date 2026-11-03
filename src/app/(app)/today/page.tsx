@@ -26,7 +26,6 @@ type TodayPageProps = {
 
 type TaskSectionProps = {
   categories: Category[];
-  categoriesById: Map<string, Category>;
   description: string;
   emptyMessage: string;
   /**
@@ -53,7 +52,6 @@ function formatLongDate(date: string) {
 
 type FocusAreaProps = {
   categories: Category[];
-  categoriesById: Map<string, Category>;
   tasks: Task[];
   todayDate: string;
 };
@@ -64,7 +62,6 @@ type FocusAreaProps = {
  */
 function FocusArea({
   categories,
-  categoriesById,
   tasks,
   todayDate,
 }: FocusAreaProps) {
@@ -105,7 +102,6 @@ function FocusArea({
         {tasks.map((task) => (
           <TaskRow
             categories={categories}
-            category={categoriesById.get(task.categoryId)}
             // Em foco pode vir de qualquer data: o atraso continua visível.
             isOverdue={task.dueDate < todayDate}
             key={task.id}
@@ -142,7 +138,6 @@ function FocusArea({
 
 function TaskSection({
   categories,
-  categoriesById,
   description,
   emptyMessage,
   focusTasks,
@@ -190,7 +185,6 @@ function TaskSection({
       {focusTasks ? (
         <FocusArea
           categories={categories}
-          categoriesById={categoriesById}
           tasks={focusTasks}
           todayDate={todayDate}
         />
@@ -201,7 +195,6 @@ function TaskSection({
           {tasks.map((task) => (
             <TaskRow
               categories={categories}
-              category={categoriesById.get(task.categoryId)}
               isOverdue={isOverdue}
               key={task.id}
               priority={calculatePriorityScore(task, todayDate)}
@@ -247,9 +240,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
   const todayRest = groups.today.filter(notInProgress);
   const overdueRest = groups.overdue.filter(notInProgress);
   const upcomingRest = groups.upcoming.filter(notInProgress);
-  const categoriesById = new Map(
-    categories.map((category) => [category.id, category]),
-  );
 
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">
@@ -359,7 +349,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
         <div className="mt-8 grid gap-7">
           <TaskSection
             categories={categories}
-            categoriesById={categoriesById}
             description="Tarefas previstas para hoje, inclusive as que atravessam mais de um dia."
             emptyMessage="Nenhuma tarefa prevista para hoje."
             focusTasks={groups.inProgress}
@@ -372,7 +361,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
 
           <TaskSection
             categories={categories}
-            categoriesById={categoriesById}
             description="Prazos que passaram e ainda estão abertos"
             emptyMessage="Nada atrasado. O dia começa mais leve."
             id="atrasadas"
@@ -385,7 +373,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
 
           <TaskSection
             categories={categories}
-            categoriesById={categoriesById}
             description="Entregas futuras, ordenadas pelo prazo."
             emptyMessage="Nenhuma próxima tarefa por enquanto."
             label="No horizonte"
@@ -406,7 +393,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
                 {[...groups.completed, ...groups.archived].map((task) => (
                   <TaskRow
                     categories={categories}
-                    category={categoriesById.get(task.categoryId)}
                     key={task.id}
                     priority={calculatePriorityScore(task, todayDate)}
                     task={task}

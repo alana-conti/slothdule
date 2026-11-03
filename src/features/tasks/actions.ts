@@ -192,6 +192,108 @@ async function applyTaskStatus(
   return { title: task.title, leavesAwarded: result.leavesAwarded };
 }
 
+/** Campos que a linha da lista edita sozinhos, sem abrir o formulário. */
+export type TaskFieldsPatch = Partial<
+  Pick<
+    TaskInput,
+    | "categoryId"
+    | "dueDate"
+    | "dueTime"
+    | "estimatedMinutes"
+    | "priority"
+    | "title"
+  >
+>;
+
+function validateFieldsPatch(patch: TaskFieldsPatch) {
+  if (patch.title !== undefined) {
+    const title = patch.title.trim();
+
+    if (!title) {
+      throw new Error("O título não pode ficar vazio.");
+    }
+
+    if (title.length > 500) {
+      throw new Error("O título pode ter até 500 caracteres.");
+    }
+  }
+
+  if (
+    patch.priority !== undefined &&
+    !taskPriorities.includes(patch.priority)
+  ) {
+    throw new Error("Prioridade inválida.");
+  }
+
+  if (patch.categoryId !== undefined && !patch.categoryId) {
+    throw new Error("Escolha uma categoria.");
+  }
+
+  if (
+    patch.dueDate !== undefined &&
+    !/^\d{4}-\d{2}-\d{2}$/.test(patch.dueDate)
+  ) {
+    throw new Error("Informe um prazo válido.");
+  }
+
+  if (
+    patch.dueTime !== undefined &&
+    patch.dueTime !== null &&
+    !/^\d{2}:\d{2}(:\d{2})?$/.test(patch.dueTime)
+  ) {
+    throw new Error("Informe um horário válido.");
+  }
+
+  if (
+    patch.estimatedMinutes !== undefined &&
+    patch.estimatedMinutes !== null &&
+    (!Number.isInteger(patch.estimatedMinutes) || patch.estimatedMinutes < 0)
+  ) {
+    throw new Error("A estimativa deve ser um número inteiro positivo.");
+  }
+}
+
+/** Muda prioridade, categoria, prazo ou estimativa, preservando o resto. */
+export async function updateTaskFieldsAction(
+  taskId: string,
+  patch: TaskFieldsPatch,
+): Promise<SimpleActionResult> {
+  try {
+    validateFieldsPatch(patch);
+
+    const task = await getTask(taskId);
+
+    if (!task) {
+      throw new Error("Tarefa não encontrada.");
+    }
+
+    await updateTask(taskId, {
+      categoryId: patch.categoryId ?? task.categoryId,
+      title: patch.title?.trim() ?? task.title,
+      description: task.description,
+      workContext: task.workContext,
+      status: task.status,
+      priority: patch.priority ?? task.priority,
+      startDate: task.startDate,
+      dueDate: patch.dueDate ?? task.dueDate,
+      dueTime: patch.dueTime !== undefined ? patch.dueTime : task.dueTime,
+      estimatedMinutes:
+        patch.estimatedMinutes !== undefined
+          ? patch.estimatedMinutes
+          : task.estimatedMinutes,
+    });
+
+    revalidatePath("/", "layout");
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Não foi possível atualizar a tarefa."),
+    };
+  }
+}
+
 /** Edição a partir da lista: devolve o resultado em vez de redirecionar. */
 export async function updateTaskAction(
   formData: FormData,

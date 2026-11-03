@@ -1,17 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useOptimistic, useState, useTransition } from "react";
-import type { FormEvent } from "react";
+import {
+    useId,
+    useMemo,
+    useOptimistic,
+    useRef,
+    useState,
+    useTransition,
+} from "react";
+import type { FormEvent, KeyboardEvent, MouseEvent } from "react";
 
 import { useToast } from "@/components/sloth/toast";
+import { ChipSelect } from "@/components/ui/chip-select";
 import {
     archiveTaskAction,
     changeTaskStatusAction,
     removeTaskAction,
     updateTaskAction,
+    updateTaskFieldsAction,
 } from "@/features/tasks/actions";
+import type { TaskFieldsPatch } from "@/features/tasks/actions";
 import { PauseReasonDialog } from "@/features/tasks/pause-reason-dialog";
+import {
+    TaskFieldEditor,
+    priorityDotClasses,
+    priorityLabels,
+} from "@/features/tasks/task-field-editor";
+import type { TaskEditableField } from "@/features/tasks/task-field-editor";
 import { TaskForm } from "@/features/tasks/task-form";
 import {
     formatEstimatedMinutes,
@@ -19,28 +35,14 @@ import {
     getTaskDurationDays,
 } from "@/features/tasks/today";
 import type { PriorityScoreResult } from "@/lib/priority";
-import type { Category, Task, TaskPriority, TaskStatus } from "@/types/tasks";
+import { taskPriorities } from "@/types/tasks";
+import type { Category, Task, TaskStatus } from "@/types/tasks";
 
 type TaskRowProps = {
     categories: Category[];
-    category?: Category;
     isOverdue?: boolean;
     priority: PriorityScoreResult;
     task: Task;
-};
-
-const priorityLabels: Record<TaskPriority, string> = {
-    low: "Baixa",
-    medium: "Média",
-    high: "Alta",
-    critical: "Crítica",
-};
-
-const priorityDotClasses: Record<TaskPriority, string> = {
-    low: "bg-sloth-muted/50",
-    medium: "bg-sloth-leaf",
-    high: "bg-sloth-amber",
-    critical: "bg-sloth-terracotta",
 };
 
 const statusLabels: Record<TaskStatus, string> = {
@@ -85,12 +87,25 @@ function formatSchedule(task: Task) {
     return `${formatEstimatedMinutes(task.estimatedMinutes)} estimados`;
 }
 
+const priorityOptions = taskPriorities.map((value) => ({
+    label: priorityLabels[value],
+    leading: (
+        <span
+            aria-hidden="true"
+            className={`size-2 shrink-0 rounded-full ${priorityDotClasses[value]}`}
+        />
+    ),
+    value,
+}));
+
+const metaChipClasses =
+    "-mx-1.5 inline-flex min-h-6 cursor-pointer items-center gap-1.5 rounded-full px-1.5 py-0.5 transition hover:bg-sloth-moss/25 hover:text-sloth-forest hover:ring-1 hover:ring-sloth-moss/60 disabled:cursor-wait";
+
 const actionButtonClasses =
     "inline-flex min-h-10 cursor-pointer items-center rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-medium transition hover:bg-sloth-beige";
 
 export function TaskRow({
     categories,
-    category,
     isOverdue = false,
     priority,
     task,
@@ -105,9 +120,42 @@ export function TaskRow({
     const [pending, startTransition] = useTransition();
     // A linha já reflete o novo status enquanto o servidor responde.
     const [status, setOptimisticStatus] = useOptimistic(task.status);
+    const [editingTitle, setEditingTitle] = useState(false);
+    // Enter/Esc já resolveram a edição: o blur que vem junto não salva de novo.
+    const titleSettled = useRef(false);
+    const [editingField, setEditingField] = useState<TaskEditableField | null>(
+        null,
+    );
+    // Prioridade, categoria, prazo e estimativa também mudam na hora.
+    const savedFields = useMemo(
+        () => ({
+            categoryId: task.categoryId,
+            dueDate: task.dueDate,
+            dueTime: task.dueTime,
+            estimatedMinutes: task.estimatedMinutes,
+            priority: task.priority,
+            title: task.title,
+        }),
+        [
+            task.categoryId,
+            task.dueDate,
+            task.dueTime,
+            task.estimatedMinutes,
+            task.priority,
+            task.title,
+        ],
+    );
+    const [fields, setOptimisticFields] = useOptimistic(
+        savedFields,
+        (current, patch: TaskFieldsPatch) => ({ ...current, ...patch }),
+    );
 
     const isFinished = status === "done" || status === "archived";
-    const schedule = formatSchedule(task);
+    const schedule = formatSchedule({ ...task, ...fields });
+    const categoryOptions = categories.map((item) => ({
+        label: item.name,
+        value: item.id,
+    }));
 
     function undoTo(previous: TaskStatus, previousReason: string | null) {
         startTransition(async () => {
@@ -208,6 +256,113 @@ export function TaskRow({
         });
     }
 
+    function saveFields(patch: TaskFieldsPatch) {
+        if (pending) {
+            return;
+        }
+
+        const previous: TaskFieldsPatch = {};
+
+        for (const key of Object.keys(patch) as (keyof TaskFieldsPatch)[]) {
+            Object.assign(previous, { [key]: task[key] });
+        }
+
+        setEditingField(null);
+
+        startTransition(async () => {
+            setOptimisticFields(patch);
+
+            const result = await updateTaskFieldsAction(task.id, patch);
+
+            if (!result.ok) {
+                toast({
+                    description: result.error,
+                    title: "Não foi possível atualizar",
+                    tone: "error",
+                });
+                return;
+            }
+
+            toast({
+                action: {
+                    label: "Desfazer",
+                    onClick: () =>
+                        startTransition(async () => {
+                            const undone = await updateTaskFieldsAction(
+                                task.id,
+                                previous,
+                            );
+
+                            toast(
+                                undone.ok
+                                    ? {
+                                          description: `“${task.title}” voltou como estava.`,
+                                          title: "Desfeito",
+                                      }
+                                    : {
+                                          description: undone.error,
+                                          title: "Não foi possível desfazer",
+                                          tone: "error",
+                                      },
+                            );
+                        }),
+                },
+                description: `“${task.title}” foi atualizada.`,
+                title: "Tarefa atualizada",
+            });
+        });
+    }
+
+    function startEditingTitle() {
+        titleSettled.current = false;
+        setEditingTitle(true);
+    }
+
+    function finishEditingTitle(rawValue: string, save: boolean) {
+        if (titleSettled.current) {
+            return;
+        }
+
+        titleSettled.current = true;
+        setEditingTitle(false);
+
+        const nextTitle = rawValue.trim();
+
+        if (save && nextTitle && nextTitle !== fields.title) {
+            saveFields({ title: nextTitle });
+        }
+    }
+
+    function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            finishEditingTitle(event.currentTarget.value, true);
+        } else if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            finishEditingTitle(event.currentTarget.value, false);
+        }
+    }
+
+    function toggleField(next: TaskEditableField) {
+        setEditingField((current) => (current === next ? null : next));
+    }
+
+    // O fundo do card abre os detalhes; controles e texto selecionado não.
+    function handleCardClick(event: MouseEvent<HTMLDivElement>) {
+        const target = event.target as HTMLElement;
+
+        if (target.closest("a, button, input, label, select, textarea")) {
+            return;
+        }
+
+        if (window.getSelection()?.toString()) {
+            return;
+        }
+
+        setExpanded((current) => !current);
+    }
+
     function archive() {
         const previous = task.status;
         const previousReason = task.pauseReason;
@@ -292,7 +447,10 @@ export function TaskRow({
                     : "border-sloth-border bg-sloth-card"
             } ${isFinished ? "opacity-80" : ""}`}
         >
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3 sm:px-4">
+            <div
+                className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3 sm:px-4"
+                onClick={handleCardClick}
+            >
                 <button
                     aria-label={
                         isFinished ? "Reabrir tarefa" : "Concluir tarefa"
@@ -312,46 +470,100 @@ export function TaskRow({
                 <div className="min-w-0 flex-1 basis-48">
                     <h3
                         className={`text-base leading-snug font-semibold text-sloth-ink ${
-                            isFinished ? "line-through decoration-1" : ""
+                            isFinished && !editingTitle
+                                ? "line-through decoration-1"
+                                : ""
                         }`}
                     >
-                        <button
-                            aria-controls={panelId}
-                            aria-expanded={expanded}
-                            className="cursor-pointer text-left"
-                            onClick={() => setExpanded((current) => !current)}
-                            type="button"
-                        >
-                            {task.title}
-                        </button>
+                        {editingTitle ? (
+                            <input
+                                aria-label="Título da tarefa"
+                                autoFocus
+                                className="w-full rounded-lg border border-sloth-moss bg-sloth-card px-2 py-0.5 font-semibold outline-none focus:ring-3 focus:ring-sloth-moss/15"
+                                defaultValue={fields.title}
+                                maxLength={500}
+                                onBlur={(event) =>
+                                    finishEditingTitle(event.target.value, true)
+                                }
+                                onFocus={(event) => event.target.select()}
+                                onKeyDown={handleTitleKeyDown}
+                            />
+                        ) : (
+                            <button
+                                className="-mx-2 cursor-text rounded-lg px-2 py-0.5 text-left transition hover:bg-sloth-moss/25 hover:ring-1 hover:ring-sloth-moss/60 focus-visible:ring-3 focus-visible:ring-sloth-moss/15 focus-visible:outline-none disabled:cursor-wait"
+                                disabled={pending}
+                                onClick={startEditingTitle}
+                                title="Clique para editar o título"
+                                type="button"
+                            >
+                                {fields.title}
+                            </button>
+                        )}
                     </h3>
 
                     <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sloth-muted">
-                        <span className="inline-flex items-center gap-1.5">
-                            <span
-                                aria-hidden="true"
-                                className={`size-2 rounded-full ${priorityDotClasses[task.priority]}`}
+                        <ChipSelect
+                            className="-mx-1.5"
+                            disabled={pending}
+                            label="Prioridade"
+                            onChange={(priority) => saveFields({ priority })}
+                            options={priorityOptions}
+                            value={fields.priority}
+                        />
+                        {categories.length > 0 ? (
+                            <ChipSelect
+                                className="-mx-1.5"
+                                disabled={pending}
+                                label="Categoria"
+                                onChange={(categoryId) =>
+                                    saveFields({ categoryId })
+                                }
+                                options={categoryOptions}
+                                triggerClassName="bg-sloth-beige font-medium text-sloth-forest"
+                                value={fields.categoryId}
                             />
-                            {priorityLabels[task.priority]}
-                        </span>
-                        {category ? (
-                            <span className="rounded-full bg-sloth-beige px-2 py-0.5 font-medium text-sloth-forest">
-                                {category.name}
-                            </span>
                         ) : null}
-                        <span>
-                            Prazo {formatDate(task.dueDate)}
-                            {task.dueTime
-                                ? ` às ${task.dueTime.slice(0, 5)}`
+                        <button
+                            aria-expanded={editingField === "due"}
+                            aria-label="Alterar prazo"
+                            className={metaChipClasses}
+                            disabled={pending}
+                            onClick={() => toggleField("due")}
+                            type="button"
+                        >
+                            Prazo {formatDate(fields.dueDate)}
+                            {fields.dueTime
+                                ? ` às ${fields.dueTime.slice(0, 5)}`
                                 : ""}
-                        </span>
-                        <span>{schedule ?? "Sem estimativa"}</span>
+                        </button>
+                        <button
+                            aria-expanded={editingField === "estimate"}
+                            aria-label="Alterar estimativa"
+                            className={metaChipClasses}
+                            disabled={pending}
+                            onClick={() => toggleField("estimate")}
+                            type="button"
+                        >
+                            {schedule ?? "Sem estimativa"}
+                        </button>
                         {isOverdue ? (
                             <span className="font-medium text-sloth-terracotta">
                                 Passou do prazo
                             </span>
                         ) : null}
                     </p>
+
+                    {editingField ? (
+                        <TaskFieldEditor
+                            disabled={pending}
+                            dueDate={fields.dueDate}
+                            dueTime={fields.dueTime}
+                            estimatedMinutes={fields.estimatedMinutes}
+                            field={editingField}
+                            onCancel={() => setEditingField(null)}
+                            onSave={saveFields}
+                        />
+                    ) : null}
 
                     {status === "waiting" && task.pauseReason ? (
                         <p className="mt-1 line-clamp-2 text-xs break-words text-sloth-forest">
