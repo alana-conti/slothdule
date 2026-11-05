@@ -113,4 +113,64 @@ test.describe("pop-up de nova tarefa", () => {
     await toast.getByRole("button", { name: "Fechar aviso" }).click();
     await expect(toast).toBeHidden();
   });
+
+  test("Enter no campo de captura rápida cria a tarefa", async ({ page }) => {
+    const title = uniqueTitle("Criada com Enter");
+
+    await page.getByRole("button", { name: "Nova tarefa" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Descreva a tarefa rápida").fill(title);
+    await dialog.getByLabel("Descreva a tarefa rápida").press("Enter");
+
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Tarefa criada" }),
+    ).toBeVisible();
+  });
+
+  test("Enter no formulário detalhado cria a tarefa", async ({ page }) => {
+    const title = uniqueTitle("Detalhada com Enter");
+
+    await page.getByRole("button", { name: "Nova tarefa" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog
+      .locator("#category-new")
+      .selectOption({ label: E2E_CATEGORY_NAME });
+    await dialog.locator("#due-date-new").fill(todayKey());
+    await dialog.getByLabel("Título").fill(title);
+    await dialog.getByLabel("Título").press("Enter");
+
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByRole("status").filter({ hasText: "Tarefa criada" }),
+    ).toContainText(title);
+  });
+
+  test("abre na hora e só desabilita a categoria enquanto carrega", async ({
+    page,
+  }) => {
+    // Segura o carregamento das categorias (server action) por um tempo.
+    await page.route("**/today", async (route) => {
+      if (route.request().method() === "POST") {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      await route.continue();
+    });
+
+    await page.keyboard.press("n");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    // O formulário já aparece e dá pra digitar; só a categoria espera.
+    await dialog.getByLabel("Título").fill("Digitando antes de carregar");
+    await expect(dialog.locator("#category-new")).toBeDisabled();
+    await expect(
+      dialog.getByRole("button", { name: "Criar tarefa" }),
+    ).toBeDisabled();
+
+    await expect(dialog.locator("#category-new")).toBeEnabled();
+    await expect(dialog.getByLabel("Título")).toHaveValue(
+      "Digitando antes de carregar",
+    );
+  });
 });

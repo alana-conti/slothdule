@@ -31,7 +31,8 @@ type TaskFormProps = {
   /** Server Action. Use `onSubmit` quando precisar controlar o envio no cliente. */
   action?: (formData: FormData) => void | Promise<void>;
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
-  categories: Category[];
+  /** `null` enquanto as categorias carregam: o campo fica desabilitado. */
+  categories: Category[] | null;
   submitLabel: string;
   task?: Task;
 };
@@ -71,14 +72,15 @@ export function TaskForm({
         <select
           className="min-h-11 w-full rounded-2xl border border-sloth-border bg-sloth-card px-4 outline-none focus:border-sloth-moss"
           defaultValue={task?.categoryId}
+          disabled={!categories}
           id={`category-${task?.id ?? "new"}`}
           name="categoryId"
           required
         >
           <option disabled value="">
-            Selecione
+            {categories ? "Selecione" : "Carregando…"}
           </option>
-          {categories.map((category) => (
+          {(categories ?? []).map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
@@ -210,7 +212,8 @@ export function TaskForm({
       </div>
 
       <button
-        className="min-h-11 rounded-2xl bg-sloth-moss px-5 font-semibold text-white transition hover:bg-sloth-forest sm:col-span-2"
+        className="min-h-11 rounded-2xl bg-sloth-moss px-5 font-semibold text-white transition hover:bg-sloth-forest disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
+        disabled={!categories}
         type="submit"
       >
         {submitLabel}

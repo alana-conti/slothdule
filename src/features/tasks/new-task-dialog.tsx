@@ -199,7 +199,7 @@ export function NewTaskDialog() {
                     <div className="mt-6 border-t border-sloth-border pt-6">
                         {loadFailed ? (
                             <div
-                                className="rounded-2xl bg-sloth-terracotta/10 p-4 text-sm text-sloth-ink"
+                                className="mb-4 rounded-2xl bg-sloth-terracotta/10 p-4 text-sm text-sloth-ink"
                                 role="alert"
                             >
                                 <p>Não foi possível carregar as categorias.</p>
@@ -211,14 +211,13 @@ export function NewTaskDialog() {
                                     Tentar de novo
                                 </button>
                             </div>
-                        ) : categories === null ? (
-                            <p
-                                className="rounded-2xl bg-sloth-beige/50 p-4 text-sm text-sloth-muted"
-                                role="status"
-                            >
-                                Carregando categorias…
+                        ) : null}
+                        {categories !== null && categories.length === 0 ? (
+                            <p className="rounded-2xl bg-sloth-beige/50 p-4 text-sloth-muted">
+                                Nenhuma categoria disponível. Execute o seed do
+                                Supabase antes de criar tarefas.
                             </p>
-                        ) : categories.length > 0 ? (
+                        ) : (
                             <>
                                 {error ? (
                                     <p
@@ -246,11 +245,6 @@ export function NewTaskDialog() {
                                     submitLabel="Criar tarefa"
                                 />
                             </>
-                        ) : (
-                            <p className="rounded-2xl bg-sloth-beige/50 p-4 text-sloth-muted">
-                                Nenhuma categoria disponível. Execute o seed do
-                                Supabase antes de criar tarefas.
-                            </p>
                         )}
                     </div>
                 </div>

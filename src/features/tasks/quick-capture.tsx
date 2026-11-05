@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Category, TaskPriority } from "@/types/tasks";
 
 type QuickCaptureProps = {
-  categories: Category[];
+  /** `null` enquanto as categorias carregam: o campo fica desabilitado. */
+  categories: Category[] | null;
   onSubmit: React.FormEventHandler<HTMLFormElement>;
 };
 
@@ -15,6 +16,30 @@ const priorityLabels: Record<TaskPriority, string> = {
   critical: "Crítica",
 };
 
+type CategoryHint = "" | "mercado" | "financeiro" | "trabalho";
+
+function resolveCategoryId(categories: Category[] | null, hint: CategoryHint) {
+  if (!categories) {
+    return "";
+  }
+
+  if (hint) {
+    const match = categories.find(
+      (c) => c.name.toLowerCase().includes(hint) || c.slug === hint,
+    );
+
+    if (match) {
+      return match.id;
+    }
+  }
+
+  const workDefault = categories.find(
+    (c) => c.slug === "trabalho" || c.name.toLowerCase() === "trabalho",
+  );
+
+  return workDefault?.id || categories[0]?.id || "";
+}
+
 export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
   const [text, setText] = useState("");
   
@@ -22,7 +47,24 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
-  const [categoryId, setCategoryId] = useState("");
+  // A sugestão de categoria é derivada do texto + categorias, então ela
+  // acompanha as categorias que chegam depois. `categoryOverride` guarda só a
+  // escolha manual da pessoa.
+  const [categoryHint, setCategoryHint] = useState<CategoryHint>("");
+  const [categoryOverride, setCategoryOverride] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Enter apertado antes das categorias chegarem: envia assim que carregarem.
+  const submitWhenLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (categories && submitWhenLoadedRef.current) {
+      submitWhenLoadedRef.current = false;
+      formRef.current?.requestSubmit();
+    }
+  }, [categories]);
+
+  const suggestedCategoryId = resolveCategoryId(categories, categoryHint);
+  const categoryId = categoryOverride ?? suggestedCategoryId;
 
   const getLocalDateString = (d: Date) => {
     const year = d.getFullYear();
@@ -49,7 +91,8 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
       setTitle("");
       setDueDate("");
       setPriority("medium");
-      setCategoryId(categories[0]?.id || "");
+      setCategoryHint("");
+      setCategoryOverride(null);
       return;
     }
 
@@ -78,36 +121,18 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
     setPriority(parsedPriority);
 
     // 3. Category
-    let parsedCategory = "";
-    if (/\bmercado\b/i.test(lower)) {
-      const match = categories.find(
-        (c) => c.name.toLowerCase().includes("mercado") || c.slug === "mercado"
-      );
-      if (match) parsedCategory = match.id;
-    } else if (/\bfinanceiro\b/i.test(lower)) {
-      const match = categories.find(
-        (c) => c.name.toLowerCase().includes("financeiro") || c.slug === "financeiro"
-      );
-      if (match) parsedCategory = match.id;
-    }
-
-    // Work keywords: reunião, reuniao, poc, proposta, relatório, relatorio
     const workKeywords = ["reunião", "reuniao", "poc", "proposta", "relatório", "relatorio"];
-    if (!parsedCategory && workKeywords.some((kw) => new RegExp(`\\b${kw}\\b`, "i").test(lower))) {
-      const match = categories.find(
-        (c) => c.name.toLowerCase().includes("trabalho") || c.slug === "trabalho"
-      );
-      if (match) parsedCategory = match.id;
+    if (/\bmercado\b/i.test(lower)) {
+      setCategoryHint("mercado");
+    } else if (/\bfinanceiro\b/i.test(lower)) {
+      setCategoryHint("financeiro");
+    } else if (
+      workKeywords.some((kw) => new RegExp(`\\b${kw}\\b`, "i").test(lower))
+    ) {
+      setCategoryHint("trabalho");
+    } else {
+      setCategoryHint("");
     }
-
-    // Fallback category
-    if (!parsedCategory) {
-      const workDefault = categories.find(
-        (c) => c.slug === "trabalho" || c.name.toLowerCase() === "trabalho"
-      );
-      parsedCategory = workDefault?.id || categories[0]?.id || "";
-    }
-    setCategoryId(parsedCategory);
 
     // 4. Title clean up
     let cleaned = val.replace(
@@ -144,6 +169,27 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
             autoFocus
             id="quick-input"
             onChange={(e) => handleInputChange(e.target.value)}
+            onKeyDown={(e) => {
+              // O campo fica fora do <form> da sugestão, então o Enter precisa
+              // enviá-lo explicitamente (requestSubmit valida os campos).
+              if (
+                e.key !== "Enter" ||
+                e.nativeEvent.isComposing ||
+                !text.trim() ||
+                !formRef.current
+              ) {
+                return;
+              }
+
+              e.preventDefault();
+
+              if (!categories) {
+                submitWhenLoadedRef.current = true;
+                return;
+              }
+
+              formRef.current.requestSubmit();
+            }}
             placeholder="Ex: Reunião com cliente amanhã urgente"
             type="text"
             value={text}
@@ -155,6 +201,7 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
           <form
             className="rounded-xl border border-dashed border-sloth-moss/30 bg-sloth-card p-4 space-y-4 animate-in fade-in duration-200"
             onSubmit={onSubmit}
+            ref={formRef}
           >
             {/* Hidden fields representing final data to submit */}
             <input type="hidden" name="status" value="todo" />
@@ -188,11 +235,13 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
                   className="min-h-10 w-full rounded-lg border border-sloth-border bg-sloth-card px-3 outline-none focus:border-sloth-moss text-xs font-medium"
                   id="suggested-category"
                   name="categoryId"
-                  onChange={(e) => setCategoryId(e.target.value)}
+                  disabled={!categories}
+                  onChange={(e) => setCategoryOverride(e.target.value)}
                   required
                   value={categoryId}
                 >
-                  {categories.map((category) => (
+                  {!categories ? <option value="">Carregando…</option> : null}
+                  {(categories ?? []).map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
@@ -235,7 +284,8 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
 
               <div className="flex items-end">
                 <button
-                  className="min-h-10 w-full rounded-xl bg-sloth-moss px-4 text-xs font-semibold text-white transition hover:bg-sloth-forest cursor-pointer flex items-center justify-center gap-1.5"
+                  className="min-h-10 w-full rounded-xl bg-sloth-moss px-4 text-xs font-semibold text-white transition hover:bg-sloth-forest cursor-pointer flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!categories}
                   type="submit"
                 >
                   <span>🦥</span> Confirmar e Criar
