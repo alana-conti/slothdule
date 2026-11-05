@@ -11,7 +11,7 @@ test.describe("tela Hoje", () => {
     await expect(page.getByText("Carga estimada de hoje")).toBeVisible();
     await expect(page.getByText("Tarefas para hoje")).toBeVisible();
     await expect(page.getByText("Prioridade crítica hoje")).toBeVisible();
-    await expect(page.getByText("Uma coisa de cada vez")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Uma coisa de cada vez" })).toBeVisible();
   });
 
   test("cria tarefa manual e exibe em Tarefas de hoje", async ({ page }) => {

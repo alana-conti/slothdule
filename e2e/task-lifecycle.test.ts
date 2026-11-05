@@ -27,8 +27,10 @@ test.describe("ciclo de vida da tarefa", () => {
       page.getByRole("status").filter({ hasText: "Folhinhas" }),
     ).toBeVisible();
 
-    await page.goto("/today");
-    expect(await readLeafBalance(page)).toBeGreaterThan(balanceBefore);
+    // O saldo do menu lateral atualiza sem recarregar a página.
+    await expect
+      .poll(() => readLeafBalance(page))
+      .toBeGreaterThan(balanceBefore);
   });
 
   test("mudar status pelo seletor atualiza a linha sem sair da tela", async ({

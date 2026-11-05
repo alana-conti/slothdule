@@ -76,8 +76,10 @@ export async function expectToast(page: Page, text: string) {
 }
 
 export async function readLeafBalance(page: Page) {
+  // O saldo vive no menu lateral (desktop), em todas as telas do app.
   const headerText = await page
-    .locator("header p")
+    .getByRole("complementary")
+    .locator("p")
     .filter({ hasText: "Folhinhas" })
     .first()
     .textContent();
@@ -86,7 +88,7 @@ export async function readLeafBalance(page: Page) {
   const balance = Number(match?.[1]);
 
   if (!Number.isFinite(balance)) {
-    throw new Error("Não foi possível ler o saldo de Folhinhas no header.");
+    throw new Error("Não foi possível ler o saldo de Folhinhas no menu lateral.");
   }
 
   return balance;
