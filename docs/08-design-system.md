@@ -156,3 +156,11 @@ Visual sugerido:
 - Não depender apenas de cor para transmitir prioridade.
 - Labels claros em formulários.
 
+
+## 10. Navegação
+
+- **Desktop (≥ 1024px):** barra lateral fixa à esquerda, em fundo creme. Marca no topo, botão "Nova tarefa" (único verde cheio), grupos com rótulo em caixa-alta ("Seu dia", "Cantinho"), saldo de Folhinhas e conta no rodapé.
+- **Celular:** barra inferior com Hoje, Tempo, botão central "+" (nova tarefa), Agenda e "Mais" (Recompensas, conta, Sair).
+- Item ativo = card branco quente com borda bege e texto verde floresta.
+- Novas telas entram em `groups` em `src/components/sloth/app-navigation.tsx`; o menu vive no layout `(app)`, não nas páginas.
+- O pop-up de nova tarefa abre por eventos (`src/features/tasks/new-task-events.ts`) ou pela tecla N.

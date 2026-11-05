@@ -11,6 +11,10 @@ import {
 
 import { useToast } from "@/components/sloth/toast";
 
+import {
+    OPEN_NEW_TASK_EVENT,
+    PRELOAD_NEW_TASK_EVENT,
+} from "@/features/tasks/new-task-events";
 import { QuickCapture } from "@/features/tasks/quick-capture";
 import { TaskForm } from "@/features/tasks/task-form";
 import {
@@ -144,31 +148,19 @@ export function NewTaskDialog() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [openDialog]);
 
+    // Os botões do menu abrem o pop-up (e aquecem as categorias) por eventos.
+    useEffect(() => {
+        window.addEventListener(OPEN_NEW_TASK_EVENT, openDialog);
+        window.addEventListener(PRELOAD_NEW_TASK_EVENT, loadCategories);
+
+        return () => {
+            window.removeEventListener(OPEN_NEW_TASK_EVENT, openDialog);
+            window.removeEventListener(PRELOAD_NEW_TASK_EVENT, loadCategories);
+        };
+    }, [loadCategories, openDialog]);
+
     return (
         <>
-            <button
-                aria-keyshortcuts="N"
-                aria-label="Nova tarefa"
-                className="fixed right-5 bottom-5 z-40 inline-flex min-h-14 cursor-pointer items-center gap-2 rounded-full bg-sloth-moss px-5 text-sm font-semibold text-white shadow-soft transition hover:bg-sloth-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest sm:right-8 sm:bottom-8"
-                onClick={openDialog}
-                onFocus={loadCategories}
-                onPointerEnter={loadCategories}
-                type="button"
-            >
-                <span aria-hidden="true" className="text-2xl leading-none">
-                    +
-                </span>
-                <span aria-hidden="true" className="hidden sm:inline">
-                    Nova tarefa
-                </span>
-                <kbd
-                    aria-hidden="true"
-                    className="hidden rounded-md bg-white/20 px-1.5 py-0.5 font-sans text-xs sm:inline"
-                >
-                    N
-                </kbd>
-            </button>
-
             <dialog
                 aria-labelledby="new-task-title"
                 className="m-auto max-h-[90vh] w-[min(42rem,calc(100vw-2rem))] overflow-y-auto rounded-card border border-sloth-border bg-sloth-card text-sloth-ink shadow-soft backdrop:bg-sloth-ink/40"

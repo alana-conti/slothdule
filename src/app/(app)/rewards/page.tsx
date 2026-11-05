@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { TopNavigation } from "@/components/sloth/top-navigation";
 import {
   getUserLeafBalance,
   listActiveRewardItems,
@@ -35,12 +34,10 @@ export default async function RewardsPage({ searchParams }: RewardsPageProps) {
     listRewardRedemptions(),
   ]);
 
-  const email = user.email || "sua conta";
-
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">
       <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-col gap-5 rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:p-8 xl:flex-row xl:items-center xl:justify-between">
+        <header className="rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:p-8">
           <div className="min-w-0">
             <p className="text-xs font-semibold tracking-[0.2em] text-sloth-moss uppercase">
               Loja de Recompensas
@@ -49,11 +46,9 @@ export default async function RewardsPage({ searchParams }: RewardsPageProps) {
               Suas conquistas com afeto
             </h1>
             <p className="mt-2 text-sm text-sloth-muted">
-              {email} · <span className="inline-flex items-center gap-1"><span className="text-sloth-leaf">🍃</span> {balance} Folhinhas</span>
+              <span className="inline-flex items-center gap-1"><span className="text-sloth-leaf">🍃</span> {balance} Folhinhas</span>
             </p>
           </div>
-
-          <TopNavigation current="rewards" />
         </header>
 
         {message ? (

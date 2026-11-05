@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
-import { listCategories, listTasks, getUserLeafBalance } from "@/features/tasks/data";
+import { listCategories, listTasks } from "@/features/tasks/data";
 import { TaskRow } from "@/features/tasks/task-row";
 import {
   FOCUS_LIMIT,
@@ -15,7 +15,6 @@ import { getCurrentUser } from "@/lib/api/server";
 import type { Category, Task } from "@/types/tasks";
 
 import { PwaNotificationManager } from "@/components/sloth/pwa-notification-manager";
-import { TopNavigation } from "@/components/sloth/top-navigation";
 
 type TodayPageProps = {
   searchParams: Promise<{
@@ -218,14 +217,12 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
     redirect("/login");
   }
 
-  const [{ error, message }, categories, tasks, balance] = await Promise.all([
+  const [{ error, message }, categories, tasks] = await Promise.all([
     searchParams,
     listCategories(),
     listTasks(),
-    getUserLeafBalance(),
   ]);
 
-  const email = user.email || "sua conta";
   const todayDate = getTodayDateKey();
   const groups = groupTasksForToday(tasks, todayDate);
   const dailyMinutes = getDailyEstimatedMinutes(groups.today);
@@ -244,7 +241,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">
       <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-col gap-5 rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:p-8 xl:flex-row xl:items-center xl:justify-between">
+        <header className="rounded-card border border-sloth-border bg-sloth-card p-6 shadow-soft sm:p-8">
           <div className="min-w-0">
             <p className="text-xs font-semibold tracking-[0.2em] text-sloth-moss uppercase">
               Hoje
@@ -253,11 +250,9 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
               Uma coisa de cada vez
             </h1>
             <p className="mt-2 text-sm text-sloth-muted">
-              {formatLongDate(todayDate)} · {email} · <span className="inline-flex items-center gap-1"><span className="text-sloth-leaf">🍃</span> {balance} Folhinhas</span>
+              {formatLongDate(todayDate)}
             </p>
           </div>
-
-          <TopNavigation current="today" />
         </header>
 
         {message ? (

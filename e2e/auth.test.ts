@@ -62,7 +62,7 @@ test.describe("fluxo de autenticação", () => {
     await page.getByRole("button", { name: "Entrar com calma" }).click();
 
     await expect(page).toHaveURL(/\/today/);
-    await expect(page.locator("header").getByText(E2E_EMAIL)).toBeVisible();
+    await expect(page.getByRole("complementary").getByText(E2E_EMAIL)).toBeVisible();
   });
 });
 
