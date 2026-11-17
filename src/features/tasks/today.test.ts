@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getDailyEstimatedMinutes,
   getTaskDailyEstimatedMinutes,
+  getTaskCompletedDateKey,
   getTaskDurationDays,
   groupTasksForToday,
 } from "./today";
@@ -140,5 +141,95 @@ describe("daily task estimates", () => {
 
     expect(getTaskDurationDays(task)).toBe(1);
     expect(getTaskDailyEstimatedMinutes(task)).toBe(45);
+  });
+});
+
+describe("concluídas hoje", () => {
+  const today = "2026-06-12";
+
+  it("separa o que foi concluído hoje do que foi concluído em outros dias", () => {
+    const earlierToday = createTask({
+      id: "earlier-today",
+      status: "done",
+      completedAt: "2026-06-12T12:00:00Z",
+    });
+    const laterToday = createTask({
+      id: "later-today",
+      status: "done",
+      completedAt: "2026-06-12T18:30:00Z",
+    });
+    const yesterday = createTask({
+      id: "yesterday",
+      status: "done",
+      completedAt: "2026-06-11T15:00:00Z",
+    });
+    const open = createTask({ id: "open" });
+
+    const groups = groupTasksForToday(
+      [earlierToday, yesterday, open, laterToday],
+      today,
+    );
+
+    expect(groups.completedToday.map((task) => task.id)).toEqual([
+      "later-today",
+      "earlier-today",
+    ]);
+    expect(groups.completed.map((task) => task.id)).toEqual(["yesterday"]);
+  });
+
+  it("usa o fuso de São Paulo para decidir o dia da conclusão", () => {
+    // 01:30 UTC do dia 13 ainda é 22:30 do dia 12 em São Paulo.
+    const lateNight = createTask({
+      status: "done",
+      completedAt: "2026-06-13T01:30:00Z",
+    });
+    // 03:30 UTC do dia 12 ainda é 00:30 do dia 12 em São Paulo.
+    const earlyMorning = createTask({
+      id: "early",
+      status: "done",
+      completedAt: "2026-06-12T03:30:00Z",
+    });
+    // 02:30 UTC do dia 12 é 23:30 do dia 11 em São Paulo.
+    const dayBefore = createTask({
+      id: "day-before",
+      status: "done",
+      completedAt: "2026-06-12T02:30:00Z",
+    });
+
+    expect(getTaskCompletedDateKey(lateNight)).toBe("2026-06-12");
+    expect(
+      groupTasksForToday([lateNight, earlyMorning, dayBefore], today)
+        .completedToday.map((task) => task.id),
+    ).toEqual(["task-1", "early"]);
+  });
+
+  it("cai para a última atualização quando não há data de conclusão", () => {
+    const legacy = createTask({
+      status: "done",
+      completedAt: null,
+      updatedAt: "2026-06-12T14:00:00Z",
+    });
+
+    expect(groupTasksForToday([legacy], today).completedToday).toEqual([
+      legacy,
+    ]);
+  });
+
+  it("não conta tarefas abertas nem arquivadas", () => {
+    const archived = createTask({
+      status: "archived",
+      completedAt: "2026-06-12T12:00:00Z",
+    });
+    const reopened = createTask({
+      id: "reopened",
+      status: "todo",
+      completedAt: null,
+      updatedAt: "2026-06-12T12:00:00Z",
+    });
+
+    expect(getTaskCompletedDateKey(archived)).toBeNull();
+    expect(
+      groupTasksForToday([archived, reopened], today).completedToday,
+    ).toEqual([]);
   });
 });

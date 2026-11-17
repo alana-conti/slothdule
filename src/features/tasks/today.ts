@@ -12,6 +12,9 @@ export type TodayTaskGroups = {
   overdue: Task[];
   today: Task[];
   upcoming: Task[];
+  /** Concluídas hoje, da mais recente para a mais antiga. */
+  completedToday: Task[];
+  /** Concluídas em outros dias. */
   completed: Task[];
   archived: Task[];
 };
@@ -58,6 +61,22 @@ export function getTaskDailyEstimatedMinutes(task: Task) {
   }
 
   return task.estimatedMinutes / getTaskDurationDays(task);
+}
+
+/**
+ * Dia (no fuso do app) em que a tarefa foi concluída, ou `null` se ela não está
+ * feita. Tarefas antigas sem `completedAt` usam a última atualização.
+ */
+export function getTaskCompletedDateKey(task: Task) {
+  if (task.status !== "done") {
+    return null;
+  }
+
+  return getTodayDateKey(new Date(task.completedAt ?? task.updatedAt));
+}
+
+function getCompletedTimestamp(task: Task) {
+  return task.completedAt ?? task.updatedAt;
 }
 
 function compareByScore(
@@ -117,9 +136,20 @@ export function groupTasksForToday(
           l.dueDate.localeCompare(r.dueDate),
         ),
       ),
+    completedToday: tasks
+      .filter((task) => getTaskCompletedDateKey(task) === todayDate)
+      .sort((left, right) =>
+        getCompletedTimestamp(right).localeCompare(getCompletedTimestamp(left)),
+      ),
     completed: tasks
-      .filter((task) => task.status === "done")
-      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
+      .filter(
+        (task) =>
+          task.status === "done" &&
+          getTaskCompletedDateKey(task) !== todayDate,
+      )
+      .sort((left, right) =>
+        getCompletedTimestamp(right).localeCompare(getCompletedTimestamp(left)),
+      ),
     archived: tasks
       .filter((task) => task.status === "archived")
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),

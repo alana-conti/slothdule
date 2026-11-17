@@ -216,7 +216,7 @@ test.describe("ciclo de vida da tarefa", () => {
     ).toContainText(title);
   });
 
-  test("tarefa concluída fica em Concluídas e arquivadas", async ({
+  test("tarefa concluída hoje fica em Concluídas hoje", async ({
     page,
   }) => {
     const title = uniqueTitle("Histórico concluída");
@@ -229,11 +229,9 @@ test.describe("ciclo de vida da tarefa", () => {
       page.getByRole("status").filter({ hasText: "Folhinhas" }),
     ).toBeVisible();
 
-    await page
-      .locator("summary")
-      .filter({ hasText: "Concluídas e arquivadas" })
-      .click();
-    await expect(taskCard(page, title)).toBeVisible();
+    const doneToday = page.getByRole("group", { name: "Concluídas hoje" });
+    await doneToday.locator("summary").click();
+    await expect(doneToday).toContainText(title);
   });
 
   test("editar tarefa dentro da linha e salvar", async ({ page }) => {
@@ -372,7 +370,7 @@ test.describe("ciclo de vida da tarefa", () => {
     await expect(taskCard(page, newTitle)).toBeVisible();
   });
 
-  test("arquivar tarefa move para Concluídas e arquivadas", async ({
+  test("arquivar tarefa move para o Histórico", async ({
     page,
   }) => {
     const title = uniqueTitle("Arquivar tarefa");
@@ -386,7 +384,7 @@ test.describe("ciclo de vida da tarefa", () => {
 
     await page
       .locator("summary")
-      .filter({ hasText: "Concluídas e arquivadas" })
+      .filter({ hasText: "Histórico" })
       .click();
     await expect(taskCard(page, title)).toBeVisible();
   });

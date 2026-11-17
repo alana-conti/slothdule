@@ -25,6 +25,11 @@ type TodayPageProps = {
 
 type TaskSectionProps = {
   categories: Category[];
+  /**
+   * Concluídas hoje: ficam numa área recolhida no fim da seção, com contador.
+   * Passar a prop (mesmo vazia) é o que mostra a área.
+   */
+  completedTodayTasks?: Task[];
   description: string;
   emptyMessage: string;
   /**
@@ -135,8 +140,88 @@ function FocusArea({
   );
 }
 
+type CompletedTodayAreaProps = {
+  categories: Category[];
+  tasks: Task[];
+  todayDate: string;
+};
+
+/**
+ * O que já saiu da frente hoje. Começa recolhida para não pesar na lista, mas o
+ * contador fica sempre à vista: ver o número subir é o que dá gás.
+ */
+function CompletedTodayArea({
+  categories,
+  tasks,
+  todayDate,
+}: CompletedTodayAreaProps) {
+  const count = tasks.length;
+
+  return (
+    <details
+      aria-label="Concluídas hoje"
+      className="group/done mt-4 rounded-2xl border border-sloth-leaf/30 bg-sloth-leaf/5"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 transition select-none hover:bg-sloth-leaf/10 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sloth-leaf/15 text-sm font-semibold text-sloth-forest"
+          >
+            ✓
+          </span>
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold tracking-[0.14em] text-sloth-forest uppercase">
+              Concluídas hoje
+            </span>
+            <span className="block text-sm text-sloth-muted">
+              {count === 0
+                ? "O primeiro passo do dia também conta."
+                : count === 1
+                  ? "Uma coisa a menos na cabeça."
+                  : `${count} coisas a menos na cabeça.`}
+            </span>
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full bg-sloth-leaf/15 px-3 py-1 text-sm font-semibold text-sloth-forest">
+            {count}
+            <span className="sr-only">
+              {count === 1 ? " tarefa concluída hoje" : " tarefas concluídas hoje"}
+            </span>
+          </span>
+          <span
+            aria-hidden="true"
+            className="text-[10px] text-sloth-muted/70 transition-transform group-open/done:rotate-180"
+          >
+            ▼
+          </span>
+        </span>
+      </summary>
+
+      <div className="grid gap-2 px-3 pb-3">
+        {count > 0 ? (
+          tasks.map((task) => (
+            <TaskRow
+              categories={categories}
+              key={task.id}
+              priority={calculatePriorityScore(task, todayDate)}
+              task={task}
+            />
+          ))
+        ) : (
+          <p className="rounded-2xl border border-dashed border-sloth-leaf/30 px-4 py-5 text-center text-sm text-sloth-muted">
+            Quando você concluir uma tarefa hoje, ela aparece aqui.
+          </p>
+        )}
+      </div>
+    </details>
+  );
+}
+
 function TaskSection({
   categories,
+  completedTodayTasks,
   description,
   emptyMessage,
   focusTasks,
@@ -205,6 +290,14 @@ function TaskSection({
         <p className="rounded-2xl border border-dashed border-sloth-border bg-sloth-card px-5 py-7 text-center text-sm text-sloth-muted">
           {emptyMessage}
         </p>
+      ) : null}
+
+      {completedTodayTasks ? (
+        <CompletedTodayArea
+          categories={categories}
+          tasks={completedTodayTasks}
+          todayDate={todayDate}
+        />
       ) : null}
     </section>
   );
@@ -344,8 +437,13 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
         <div className="mt-8 grid gap-7">
           <TaskSection
             categories={categories}
+            completedTodayTasks={groups.completedToday}
             description="Tarefas previstas para hoje, inclusive as que atravessam mais de um dia."
-            emptyMessage="Nenhuma tarefa prevista para hoje."
+            emptyMessage={
+              groups.completedToday.length > 0
+                ? "Tudo o que estava previsto para hoje está feito."
+                : "Nenhuma tarefa prevista para hoje."
+            }
             focusTasks={groups.inProgress}
             id="hoje"
             label="Agora"
@@ -381,7 +479,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
           <section className="mt-8">
             <details>
               <summary className="cursor-pointer text-sm font-medium text-sloth-muted">
-                Concluídas e arquivadas (
+                Histórico: concluídas antes de hoje e arquivadas (
                 {groups.completed.length + groups.archived.length})
               </summary>
               <div className="mt-4 grid gap-2">

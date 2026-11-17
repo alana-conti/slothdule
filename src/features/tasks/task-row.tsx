@@ -378,7 +378,7 @@ export function TaskRow({
                               onClick: () =>
                                   undoTo(previous, previousReason),
                           },
-                          description: `“${task.title}” foi para Concluídas e arquivadas.`,
+                          description: `“${task.title}” foi para o Histórico, no fim da página.`,
                           title: "Tarefa arquivada",
                       }
                     : {

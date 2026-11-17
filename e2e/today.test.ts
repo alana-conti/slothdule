@@ -107,4 +107,29 @@ test.describe("tela Hoje", () => {
         .filter({ has: page.getByRole("heading", { name: "Próximas tarefas" }) }),
     ).toContainText(title);
   });
+
+  test("concluir uma tarefa leva para Concluídas hoje e aumenta o contador", async ({
+    page,
+  }) => {
+    const done = page.getByRole("group", { name: "Concluídas hoje" });
+    const counter = done.getByText(/^\d+ tarefas? concluídas? hoje$/);
+
+    await expect(done).toBeVisible();
+    const readCount = async () =>
+      Number((await counter.textContent())?.split(" ")[0]);
+    const before = await readCount();
+
+    const title = uniqueTitle("Concluída hoje");
+    await createTaskByForm(page, { title, dueDate: todayKey() });
+    await taskCard(page, title)
+      .getByRole("button", { name: "Concluir tarefa", exact: true })
+      .click();
+
+    await expect.poll(readCount).toBe(before + 1);
+
+    // Começa recolhida: a tarefa só aparece ao abrir a área.
+    await expect(done.getByRole("heading", { name: title })).toBeHidden();
+    await done.getByText("Concluídas hoje", { exact: true }).click();
+    await expect(done.getByRole("heading", { name: title })).toBeVisible();
+  });
 });
