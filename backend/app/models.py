@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    SmallInteger,
     String,
     Text,
     Time,
@@ -27,7 +28,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -90,6 +91,27 @@ class LeafTransactionType(str, enum.Enum):
     weekly_bonus = "weekly_bonus"
     reward_redemption = "reward_redemption"
     manual_adjustment = "manual_adjustment"
+    habit_checkin = "habit_checkin"
+
+
+class HabitKind(str, enum.Enum):
+    """Fazer (o check-in diz que fez) ou evitar (diz que conseguiu evitar)."""
+
+    do = "do"
+    avoid = "avoid"
+
+
+class HabitPeriod(str, enum.Enum):
+    morning = "morning"
+    afternoon = "afternoon"
+    evening = "evening"
+
+
+class HabitCheckinStatus(str, enum.Enum):
+    """`done` cuida da planta e rende Folhinhas; `rest` é folga: congela o dia."""
+
+    done = "done"
+    rest = "rest"
 
 
 class RewardRedemptionStatus(str, enum.Enum):
@@ -494,4 +516,79 @@ class LeafTransaction(Base):
             unique=True,
             postgresql_where=text("task_id IS NOT NULL AND type = 'task_completion'"),
         ),
+    )
+
+
+class Habit(Base):
+    """Hábito da Rotina (docs/11-rotina-e-habitos.md).
+
+    Estágio, contador e Folhinhas por check-in não são guardados: saem de
+    `app/services/habits.py`, que reprocessa o histórico de check-ins.
+    """
+
+    __tablename__ = "habits"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    kind: Mapped[HabitKind] = mapped_column(
+        SAEnum(HabitKind, name="habit_kind"), server_default=text("'do'"), nullable=False
+    )
+    # Dias ISO da semana (1 = segunda ... 7 = domingo), sem repetição.
+    weekdays: Mapped[list[int]] = mapped_column(ARRAY(SmallInteger), nullable=False)
+    time_of_day: Mapped[time | None] = mapped_column(Time, nullable=True)
+    period: Mapped[HabitPeriod | None] = mapped_column(
+        SAEnum(HabitPeriod, name="habit_period"), nullable=True
+    )
+    # Primeiro dia da agenda: faltas só contam a partir dele.
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), onupdate=_now(), nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "cardinality(weekdays) BETWEEN 1 AND 7 AND weekdays <@ ARRAY[1,2,3,4,5,6,7]::smallint[]",
+            name="habits_weekdays_check",
+        ),
+        CheckConstraint(
+            "time_of_day IS NULL OR period IS NULL", name="habits_time_or_period_check"
+        ),
+        Index("habits_user_idx", "user_id"),
+    )
+
+
+class HabitCheckin(Base):
+    """Um registro por hábito por dia: cuidado (`done`) ou folga (`rest`)."""
+
+    __tablename__ = "habit_checkins"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    habit_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("habits.id", ondelete="CASCADE"), nullable=False
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[HabitCheckinStatus] = mapped_column(
+        SAEnum(HabitCheckinStatus, name="habit_checkin_status"), nullable=False
+    )
+    # Folhinhas geradas pelo cuidado. Nulo em folga ou quando o teto do dia já
+    # tinha sido alcançado (o cuidado conta para a planta, mas não rende).
+    leaf_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leaf_transactions.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("habit_id", "day", name="habit_checkins_habit_day_unique"),
+        Index("habit_checkins_user_day_idx", "user_id", "day"),
     )

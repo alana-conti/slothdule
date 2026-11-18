@@ -1,10 +1,13 @@
 from datetime import date, datetime, time
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.models import (
     AttachmentType,
+    HabitCheckinStatus,
+    HabitKind,
+    HabitPeriod,
     ReminderChannel,
     ReminderHorizon,
     RewardRedemptionStatus,
@@ -276,3 +279,93 @@ class LeafTransactionOut(BaseModel):
 
 class BalanceOut(BaseModel):
     balance: int
+
+
+# --- Rotina e hábitos ---
+class HabitIn(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    kind: HabitKind = HabitKind.do
+    weekdays: list[int] = Field(min_length=1, max_length=7)
+    time_of_day: time | None = None
+    period: HabitPeriod | None = None
+
+    @field_validator("title")
+    @classmethod
+    def _strip_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dê um nome ao hábito.")
+        return value
+
+    @field_validator("weekdays")
+    @classmethod
+    def _valid_weekdays(cls, value: list[int]) -> list[int]:
+        if any(day < 1 or day > 7 for day in value):
+            raise ValueError("Os dias vão de 1 (segunda) a 7 (domingo).")
+        return sorted(set(value))
+
+    @model_validator(mode="after")
+    def _time_or_period(self):
+        if self.time_of_day is not None and self.period is not None:
+            raise ValueError("Escolha um horário ou um período, não os dois.")
+        return self
+
+
+class HabitOut(BaseModel):
+    id: UUID
+    title: str
+    kind: HabitKind
+    weekdays: list[int]
+    time_of_day: time | None = None
+    period: HabitPeriod | None = None
+    start_date: date
+    created_at: datetime
+    stage: str
+    leaves_per_checkin: int
+    growth: int
+    total_checkins: int
+    current_threshold: int
+    next_stage: str | None = None
+    next_threshold: int | None = None
+    misses_in_row: int
+    regression_after: int
+    scheduled_today: bool
+    today_status: HabitCheckinStatus | None = None
+    today_leaves: int
+
+
+class HabitStageChangeOut(BaseModel):
+    day: date
+    stage: str
+    direction: str
+
+
+class HabitDayOut(BaseModel):
+    day: date
+    status: str
+
+
+class HabitDetailOut(HabitOut):
+    history: list[HabitStageChangeOut]
+    calendar: list[HabitDayOut]
+    thresholds: list[int]
+
+
+class HabitTodayOut(BaseModel):
+    date: date
+    leaves_earned: int
+    leaves_cap: int
+    scheduled: int
+    done: int
+    rest: int
+
+
+class HabitCheckinIn(BaseModel):
+    status: HabitCheckinStatus
+
+
+class HabitCheckinResultOut(BaseModel):
+    habit: HabitOut
+    leaves_awarded: int
+    leaves_today: int
+    leaves_cap: int

@@ -113,3 +113,17 @@ def balance(client) -> int:
     r = client.get("/leaves/balance")
     assert r.status_code == 200, r.text
     return r.json()["balance"]
+
+
+def make_habit(client, **overrides) -> dict:
+    payload = {"title": unique("hábito"), "weekdays": [1, 2, 3, 4, 5, 6, 7]}
+    payload.update(overrides)
+    r = client.post("/habits", json=payload)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def habits_today(client) -> dict:
+    r = client.get("/habits/today")
+    assert r.status_code == 200, r.text
+    return r.json()

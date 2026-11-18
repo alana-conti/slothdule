@@ -13,6 +13,8 @@ import { openNewTaskDialog, preloadNewTaskDialog } from "@/features/tasks/new-ta
 type NavItem = {
     /** Prefixos de rota que deixam o item ativo (a tarefa aberta pertence a Hoje). */
     activeFor: string[];
+    /** Rotas que ativam o item só quando batem exatamente (sem subrotas). */
+    activeExact?: string[];
     href: string;
     icon: ReactNode;
     label: string;
@@ -73,10 +75,24 @@ const icons = {
             <path d="M12 5v14M5 12h14" />
         </Icon>
     ),
+    sprout: (
+        <Icon>
+            <path d="M12 20v-7" />
+            <path d="M12 13c-3.5 0-5.5-2-5.5-5 3.5 0 5.5 2 5.5 5Z" />
+            <path d="M12 15c0-3 2-4.5 5-4.5 0 3-2 4.5-5 4.5Z" />
+            <path d="M7 20h10" />
+        </Icon>
+    ),
     sun: (
         <Icon>
             <circle cx="12" cy="12" r="4" />
             <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
+        </Icon>
+    ),
+    tree: (
+        <Icon>
+            <circle cx="12" cy="8.5" r="5.5" />
+            <path d="M12 14v6M9 20h6M12 16.5l-2.5-2.5M12 15.5l2-2" />
         </Icon>
     ),
     timeline: (
@@ -108,6 +124,19 @@ const calendar: NavItem = {
     label: "Calendário",
     shortLabel: "Agenda",
 };
+const routineOverview: NavItem = {
+    activeExact: ["/routine"],
+    activeFor: ["/routine/new"],
+    href: "/routine",
+    icon: icons.sprout,
+    label: "Visão geral",
+};
+const routineGarden: NavItem = {
+    activeFor: ["/routine/garden", "/routine/habits"],
+    href: "/routine/garden",
+    icon: icons.tree,
+    label: "Jardim",
+};
 const rewards: NavItem = {
     activeFor: ["/rewards"],
     href: "/rewards",
@@ -118,10 +147,15 @@ const rewards: NavItem = {
 // Novas telas entram em um grupo: o menu cresce sem mudar de layout.
 const groups: NavGroup[] = [
     { items: [today, timeline, calendar], label: "Seu dia" },
+    { items: [routineOverview, routineGarden], label: "Rotina" },
     { items: [rewards], label: "Cantinho" },
 ];
 
 function isActive(item: NavItem, pathname: string) {
+    if (item.activeExact?.includes(pathname)) {
+        return true;
+    }
+
     return item.activeFor.some(
         (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     );
@@ -319,7 +353,8 @@ function MobileBar({
     const sheetRef = useRef<HTMLDivElement>(null);
     // A folha fecha sozinha ao trocar de tela, sem efeito para isso.
     const moreOpen = openFor === pathname;
-    const moreActive = isActive(rewards, pathname);
+    const moreItems = [routineOverview, routineGarden];
+    const moreActive = [...moreItems, rewards].some((item) => isActive(item, pathname));
 
     useEffect(() => {
         if (!moreOpen) {
@@ -362,9 +397,30 @@ function MobileBar({
                     className="animate-menu-in mb-2 ml-auto w-64 rounded-2xl border border-sloth-border bg-sloth-card p-2 shadow-soft"
                     id="menu-mais"
                 >
+                    <p className="px-3 pt-1 pb-1 text-xs font-semibold tracking-[0.14em] text-sloth-muted/80 uppercase">
+                        Rotina
+                    </p>
+                    {moreItems.map((item) => {
+                        const active = isActive(item, pathname);
+
+                        return (
+                            <Link
+                                aria-current={active ? "page" : undefined}
+                                className={itemClass(active)}
+                                href={item.href}
+                                key={item.href}
+                            >
+                                <span className={active ? "text-sloth-moss" : "text-sloth-muted"}>
+                                    {item.icon}
+                                </span>
+                                {item.label}
+                            </Link>
+                        );
+                    })}
+                    <div className="mx-2 my-2 border-t border-sloth-border/70" />
                     <Link
-                        aria-current={moreActive ? "page" : undefined}
-                        className={itemClass(moreActive)}
+                        aria-current={isActive(rewards, pathname) ? "page" : undefined}
+                        className={itemClass(isActive(rewards, pathname))}
                         href={rewards.href}
                     >
                         <span className="text-sloth-leaf">{rewards.icon}</span>

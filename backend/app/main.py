@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.routers import attachments, auth, categories, clients, files, projects, reminders, rewards, subtasks, tasks
+from app.routers import attachments, auth, categories, clients, files, habits, projects, reminders, rewards, subtasks, tasks
 
 app = FastAPI(title="Slothdule API", version="1.0.0")
 
@@ -40,6 +40,7 @@ app.include_router(reminders.router)
 app.include_router(reminders.item_router)
 app.include_router(attachments.router)
 app.include_router(attachments.item_router)
+app.include_router(habits.router)
 app.include_router(rewards.router)
 app.include_router(rewards.leaves_router)
 app.include_router(files.upload_router)

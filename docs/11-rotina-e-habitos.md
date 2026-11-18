@@ -18,7 +18,7 @@ Nome do menu: **Rotina**. É um grupo próprio no menu lateral, no mesmo nível 
 - **Visão geral**: o dia dos hábitos. Botões de novo hábito e nova rotina, cuidados de hoje, Folhinhas de hábitos com o teto diário, e a lista do dia (rotinas encadeadas e hábitos soltos) para marcar feito ou folga.
 - **Jardim**: como cada hábito está crescendo. Uma planta por hábito com estágio, progresso até o próximo estágio, avisos gentis de regressão e sugestões de evolução, com filtro por estágio. Cada planta abre o detalhe do hábito.
 
-No celular, a aba Rotina abre a Visão geral, com Jardim como segunda aba no topo.
+No celular, Visão geral e Jardim ficam no menu "Mais" da barra inferior, e as duas telas têm abas no topo para alternar entre elas. A barra inferior não mudou.
 
 ## 3. Decisões tomadas
 
@@ -127,7 +127,7 @@ Estágio e sequência calculados por funções puras em `src/lib/habits/`, com t
 
 ## 7. Fatias de implementação
 
-1. Hábito + check-in + estágio + Folhinhas.
+1. Hábito + check-in + estágio + Folhinhas. **Feita em 2026-11-18**: rotas `/routine` (Visão geral), `/routine/garden` (Jardim), `/routine/new` e `/routine/habits/[id]`; API `/habits` (`backend/app/routers/habits.py`); regras em `backend/app/services/habits.py` e `src/lib/habits/`. Check-in vale para hoje e os últimos 7 dias da agenda; desmarcar devolve as Folhinhas daquele cuidado. Ainda sem rotinas encadeadas, edição de hábito na tela e bônus de rotinas.
 2. Seção "Rotina de hoje" na tela Hoje.
 3. Horário e lembretes.
 4. Rotinas encadeadas.
