@@ -30,7 +30,11 @@ test.describe("menu lateral", () => {
     const aside = page.getByRole("complementary");
 
     await expect(aside.getByText("Folhinhas")).toBeVisible();
-    await expect(aside.getByRole("button", { name: "Sair" })).toBeVisible();
+    await expect(
+      aside.getByRole("button", { name: "Abrir configurações" }),
+    ).toBeVisible();
+    // Sair mora na aba Perfil das configurações, não no menu.
+    await expect(aside.getByRole("button", { name: "Sair" })).toHaveCount(0);
   });
 });
 
@@ -49,9 +53,10 @@ test.describe("barra inferior no celular", () => {
 
     await nav.getByRole("button", { name: "Mais" }).click();
     await expect(page.getByRole("link", { name: /Recompensas/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sair" })).toBeVisible();
+    const settings = page.getByRole("button", { name: /Configurações/ });
+    await expect(settings).toBeVisible();
     await page.keyboard.press("Escape");
-    await expect(page.getByRole("button", { name: "Sair" })).toBeHidden();
+    await expect(settings).toBeHidden();
 
     await page.getByRole("button", { name: "Nova tarefa" }).click();
     await expect(

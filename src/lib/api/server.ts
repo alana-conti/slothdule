@@ -9,6 +9,8 @@ export type ApiUser = {
   email: string;
   display_name: string | null;
   avatar_url: string | null;
+  created_at?: string;
+  google_linked?: boolean;
 };
 
 async function forwardCookieHeader(): Promise<string> {

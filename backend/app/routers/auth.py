@@ -157,9 +157,32 @@ def logout(response: Response):
     return None
 
 
-@router.get("/me", response_model=schemas.UserOut)
-def me(user: models.User = Depends(get_current_user)):
-    return user
+def _me_out(db: Session, user: models.User) -> schemas.MeOut:
+    google_linked = (
+        db.query(models.OAuthAccount)
+        .filter(models.OAuthAccount.user_id == user.id, models.OAuthAccount.provider == "google")
+        .first()
+        is not None
+    )
+    return schemas.MeOut.model_validate(user).model_copy(update={"google_linked": google_linked})
+
+
+@router.get("/me", response_model=schemas.MeOut)
+def me(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return _me_out(db, user)
+
+
+@router.patch("/me", response_model=schemas.MeOut)
+def update_me(
+    payload: schemas.ProfileUpdateIn,
+    user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    name = (payload.display_name or "").strip()
+    user.display_name = name or None
+    db.commit()
+    db.refresh(user)
+    return _me_out(db, user)
 
 
 @router.get("/google/login", name="google_login")

@@ -67,9 +67,19 @@ test.describe("fluxo de autenticação", () => {
 });
 
 test.describe("sessão", () => {
-  test("botão Sair volta para /login", async ({ page }) => {
+  test("Sair, no perfil das configurações, volta para /login", async ({
+    page,
+  }) => {
     await page.goto("/today");
-    await page.getByRole("button", { name: "Sair" }).click();
+    await page.waitForLoadState("networkidle");
+    await page
+      .getByRole("complementary")
+      .getByRole("button", { name: "Abrir configurações" })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Configurações" })
+      .getByRole("button", { name: "Sair" })
+      .click();
 
     await expect(page).toHaveURL(/\/login/);
   });

@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { logout } from "@/app/login/actions";
+import { getUserInitial } from "@/features/settings/profile";
+import type { SettingsUser } from "@/features/settings/profile";
+import { SettingsDialog } from "@/features/settings/settings-dialog";
 import { openNewTaskDialog, preloadNewTaskDialog } from "@/features/tasks/new-task-events";
 
 type NavItem = {
@@ -53,16 +55,17 @@ const icons = {
             <path d="M5 19c3-5 6-7 9-9" />
         </Icon>
     ),
-    logout: (
-        <Icon>
-            <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 8l-4 4 4 4M6 12h10" />
-        </Icon>
-    ),
     more: (
         <Icon>
             <circle cx="6" cy="12" r="1" />
             <circle cx="12" cy="12" r="1" />
             <circle cx="18" cy="12" r="1" />
+        </Icon>
+    ),
+    settings: (
+        <Icon>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
         </Icon>
     ),
     plus: (
@@ -137,16 +140,36 @@ function itemClass(active: boolean) {
 
 type AppNavigationProps = {
     balance: number;
-    email: string;
+    user: SettingsUser;
 };
 
-export function AppNavigation({ balance, email }: AppNavigationProps) {
+type NavigationPartProps = AppNavigationProps & {
+    onOpenSettings: () => void;
+    pathname: string;
+};
+
+export function AppNavigation({ balance, user }: AppNavigationProps) {
     const pathname = usePathname();
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const openSettings = () => setSettingsOpen(true);
 
     return (
         <>
-            <DesktopSidebar balance={balance} email={email} pathname={pathname} />
-            <MobileBar balance={balance} email={email} pathname={pathname} />
+            <DesktopSidebar
+                balance={balance}
+                onOpenSettings={openSettings}
+                pathname={pathname}
+                user={user}
+            />
+            <MobileBar
+                balance={balance}
+                onOpenSettings={openSettings}
+                pathname={pathname}
+                user={user}
+            />
+            {settingsOpen ? (
+                <SettingsDialog onClose={() => setSettingsOpen(false)} user={user} />
+            ) : null}
         </>
     );
 }
@@ -190,9 +213,10 @@ function LeafBalance({ balance }: { balance: number }) {
 
 function DesktopSidebar({
     balance,
-    email,
+    onOpenSettings,
     pathname,
-}: AppNavigationProps & { pathname: string }) {
+    user,
+}: NavigationPartProps) {
     return (
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col gap-5 overflow-y-auto border-r border-sloth-border/70 bg-sloth-cream px-4 py-6 lg:flex">
             <Brand />
@@ -253,25 +277,33 @@ function DesktopSidebar({
 
             <div className="flex flex-col gap-2 border-t border-sloth-border/70 pt-4">
                 <LeafBalance balance={balance} />
-                <div className="flex items-center gap-2 px-1">
+                <button
+                    aria-label="Abrir configurações"
+                    className="group flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-xl px-1.5 text-left transition hover:bg-sloth-beige focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
+                    onClick={onOpenSettings}
+                    title={user.email}
+                    type="button"
+                >
                     <span
                         aria-hidden="true"
-                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sloth-gold text-xs font-semibold text-white uppercase"
+                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-sloth-gold text-xs font-semibold text-white"
                     >
-                        {email.charAt(0)}
+                        {getUserInitial(user)}
                     </span>
-                    <p className="min-w-0 flex-1 truncate text-xs text-sloth-muted" title={email}>
-                        {email}
-                    </p>
-                    <form action={logout}>
-                        <button
-                            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-xl px-2.5 text-xs font-medium text-sloth-muted transition hover:bg-sloth-beige hover:text-sloth-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
-                            type="submit"
-                        >
-                            <span className="text-xs">Sair</span>
-                        </button>
-                    </form>
-                </div>
+                    <span className="min-w-0 flex-1">
+                        {user.displayName ? (
+                            <span className="block truncate text-xs font-semibold text-sloth-ink">
+                                {user.displayName}
+                            </span>
+                        ) : null}
+                        <span className="block truncate text-xs text-sloth-muted">
+                            {user.email}
+                        </span>
+                    </span>
+                    <span className="text-sloth-muted transition group-hover:text-sloth-forest">
+                        {icons.settings}
+                    </span>
+                </button>
             </div>
         </aside>
     );
@@ -279,9 +311,10 @@ function DesktopSidebar({
 
 function MobileBar({
     balance,
-    email,
+    onOpenSettings,
     pathname,
-}: AppNavigationProps & { pathname: string }) {
+    user,
+}: NavigationPartProps) {
     const [openFor, setOpenFor] = useState<string | null>(null);
     const sheetRef = useRef<HTMLDivElement>(null);
     // A folha fecha sozinha ao trocar de tela, sem efeito para isso.
@@ -341,18 +374,22 @@ function MobileBar({
                         </span>
                     </Link>
                     <div className="mx-2 my-2 border-t border-sloth-border/70" />
-                    <p className="truncate px-3 pb-1 text-xs text-sloth-muted" title={email}>
-                        {email}
-                    </p>
-                    <form action={logout}>
-                        <button
-                            className={`${itemClass(false)} w-full cursor-pointer`}
-                            type="submit"
-                        >
-                            {icons.logout}
-                            <span className="text-sm">Sair</span>
-                        </button>
-                    </form>
+                    <button
+                        className={`${itemClass(false)} w-full cursor-pointer text-left`}
+                        onClick={() => {
+                            setOpenFor(null);
+                            onOpenSettings();
+                        }}
+                        type="button"
+                    >
+                        {icons.settings}
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-sm">Configurações</span>
+                            <span className="block truncate text-xs text-sloth-muted">
+                                {user.displayName || user.email}
+                            </span>
+                        </span>
+                    </button>
                 </div>
             ) : null}
 

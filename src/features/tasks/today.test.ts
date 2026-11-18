@@ -6,6 +6,7 @@ import {
   getTaskCompletedDateKey,
   getTaskDurationDays,
   groupTasksForToday,
+  isDayComplete,
 } from "./today";
 import type { Task } from "../../types/tasks";
 
@@ -231,5 +232,70 @@ describe("concluídas hoje", () => {
     expect(
       groupTasksForToday([archived, reopened], today).completedToday,
     ).toEqual([]);
+  });
+});
+
+describe("isDayComplete", () => {
+  const today = "2026-06-12";
+  // 15h em São Paulo, no dia de hoje.
+  const doneNow = {
+    completedAt: "2026-06-12T18:00:00Z",
+    status: "done" as const,
+  };
+
+  it("é verdade quando a última tarefa de hoje acaba de ser concluída", () => {
+    const tasks = [
+      createTask({ id: "a", ...doneNow }),
+      createTask({ id: "b", ...doneNow, completedAt: "2026-06-12T13:00:00Z" }),
+      createTask({ id: "futura", dueDate: "2026-06-15" }),
+    ];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(true);
+  });
+
+  it("não vale enquanto sobrar tarefa aberta para hoje", () => {
+    const tasks = [
+      createTask({ id: "a", ...doneNow }),
+      createTask({ id: "b", status: "waiting" }),
+    ];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(false);
+  });
+
+  it("não vale com tarefa atrasada aberta", () => {
+    const tasks = [
+      createTask({ id: "a", ...doneNow }),
+      createTask({ id: "atrasada", dueDate: "2026-06-10" }),
+    ];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(false);
+  });
+
+  it("não vale com tarefa de outro dia ainda em andamento", () => {
+    const tasks = [
+      createTask({ id: "a", ...doneNow }),
+      createTask({ id: "foco", dueDate: "2026-06-20", status: "in_progress" }),
+    ];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(false);
+  });
+
+  it("vale quando a concluída era atrasada", () => {
+    const tasks = [createTask({ id: "a", ...doneNow, dueDate: "2026-06-09" })];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(true);
+  });
+
+  it("não conta tarefa adiantada de outro dia", () => {
+    const tasks = [createTask({ id: "a", ...doneNow, dueDate: "2026-06-14" })];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(false);
+  });
+
+  it("não vale se a tarefa não está concluída ou não existe", () => {
+    const tasks = [createTask({ id: "a", status: "todo" })];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(false);
+    expect(isDayComplete(tasks, "sumiu", today)).toBe(false);
   });
 });

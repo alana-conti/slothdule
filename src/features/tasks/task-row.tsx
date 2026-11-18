@@ -35,6 +35,7 @@ import {
     getTaskDurationDays,
 } from "@/features/tasks/today";
 import type { PriorityScoreResult } from "@/lib/priority";
+import { playCompletionSound, playDayCompleteSound } from "@/lib/audio/sounds";
 import { taskPriorities } from "@/types/tasks";
 import type { Category, Task, TaskStatus } from "@/types/tasks";
 
@@ -191,6 +192,11 @@ export function TaskRow({
         const previous = task.status;
         const previousReason = task.pauseReason;
 
+        // O som sai junto com o clique, sem esperar o servidor.
+        if (next === "done") {
+            playCompletionSound();
+        }
+
         startTransition(async () => {
             setOptimisticStatus(next);
 
@@ -215,6 +221,10 @@ export function TaskRow({
             };
 
             if (next === "done") {
+                if (result.dayComplete) {
+                    playDayCompleteSound();
+                }
+
                 toast({
                     action: undo,
                     description:
@@ -501,7 +511,8 @@ export function TaskRow({
                         )}
                     </h3>
 
-                    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sloth-muted">
+                    {/* <div>, não <p>: o ChipSelect tem <div> dentro (erro de hidratação). */}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-sloth-muted">
                         <ChipSelect
                             className="-mx-1.5"
                             disabled={pending}
@@ -551,7 +562,7 @@ export function TaskRow({
                                 Passou do prazo
                             </span>
                         ) : null}
-                    </p>
+                    </div>
 
                     {editingField ? (
                         <TaskFieldEditor

@@ -34,6 +34,18 @@ class UserOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MeOut(UserOut):
+    """GET/PATCH /auth/me: o usuário logado, com o que a tela de Perfil mostra."""
+
+    created_at: datetime
+    google_linked: bool = False
+
+
+class ProfileUpdateIn(BaseModel):
+    # Vazio (ou só espaços) apaga o nome; o app volta a mostrar o e-mail.
+    display_name: str | None = Field(default=None, max_length=60)
+
+
 # --- Categories ---
 class CategoryOut(BaseModel):
     id: UUID

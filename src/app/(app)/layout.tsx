@@ -16,7 +16,16 @@ export default async function AppLayout({
   return (
     <ToastProvider>
       {user ? (
-        <AppNavigation balance={balance} email={user.email || "sua conta"} />
+        <AppNavigation
+          balance={balance}
+          user={{
+            avatarUrl: user.avatar_url,
+            createdAt: user.created_at ?? null,
+            displayName: user.display_name,
+            email: user.email || "sua conta",
+            googleLinked: user.google_linked ?? false,
+          }}
+        />
       ) : null}
       <div className={user ? "pb-28 lg:pb-0 lg:pl-64" : undefined}>
         {children}

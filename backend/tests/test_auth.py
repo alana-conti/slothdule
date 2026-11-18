@@ -110,6 +110,46 @@ def test_routes_require_auth(client, method, path):
     assert r.status_code == 401, f"{method} {path} deveria exigir auth"
 
 
+# --- GET/PATCH /auth/me (perfil) ---
+
+
+def test_me_includes_profile_fields(user_client):
+    r = user_client.get("/auth/me")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["google_linked"] is False
+    assert body["display_name"] is None
+    assert body["created_at"]
+
+
+def test_update_me_sets_display_name(user_client):
+    r = user_client.patch("/auth/me", json={"display_name": "  Ana Preguiça  "})
+    assert r.status_code == 200, r.text
+    assert r.json()["display_name"] == "Ana Preguiça"
+    assert user_client.get("/auth/me").json()["display_name"] == "Ana Preguiça"
+
+
+def test_update_me_blank_name_clears_it(user_client):
+    assert user_client.patch("/auth/me", json={"display_name": "Ana"}).status_code == 200
+    r = user_client.patch("/auth/me", json={"display_name": "   "})
+    assert r.status_code == 200, r.text
+    assert r.json()["display_name"] is None
+
+
+def test_update_me_validates_length(user_client):
+    r = user_client.patch("/auth/me", json={"display_name": "a" * 61})
+    assert r.status_code == 422
+
+
+def test_update_me_requires_auth(client):
+    assert client.patch("/auth/me", json={"display_name": "Ana"}).status_code == 401
+
+
+def test_update_me_only_changes_own_profile(user_client, second_user_client):
+    assert user_client.patch("/auth/me", json={"display_name": "Ana"}).status_code == 200
+    assert second_user_client.get("/auth/me").json()["display_name"] is None
+
+
 # --- GET /auth/lookup ---
 
 
@@ -225,6 +265,7 @@ def test_google_callback_creates_user_and_logs_in(client, google_env, engine):
     assert body["email"] == google_env.google.token["userinfo"]["email"]
     assert body["display_name"] == "Google User"
     assert body["avatar_url"].startswith("https://lh3.googleusercontent.com/")
+    assert body["google_linked"] is True
 
     TestingSession = sessionmaker(bind=engine)
     with TestingSession() as session:
@@ -250,6 +291,7 @@ def test_google_callback_links_existing_email_with_verification(client, google_e
     r = client.get("/auth/me")
     assert r.status_code == 200, r.text
     assert r.json()["id"] == local_id, "deve ser o mesmo usuário, não um novo"
+    assert r.json()["google_linked"] is True
 
     TestingSession = sessionmaker(bind=engine)
     with TestingSession() as session:

@@ -156,6 +156,35 @@ export function groupTasksForToday(
   };
 }
 
+/**
+ * O dia acabou de ficar completo? Vale quando a tarefa recém-concluída era de
+ * hoje (ou atrasada) e não sobrou nada aberto para hoje: atrasadas, de hoje ou
+ * em andamento. Concluir algo adiantado de outro dia não conta.
+ */
+export function isDayComplete(
+  tasks: Task[],
+  completedTaskId: string,
+  todayDate = getTodayDateKey(),
+) {
+  const completed = tasks.find((task) => task.id === completedTaskId);
+
+  if (
+    !completed ||
+    getTaskCompletedDateKey(completed) !== todayDate ||
+    getTaskScheduleStart(completed) > todayDate
+  ) {
+    return false;
+  }
+
+  const groups = groupTasksForToday(tasks, todayDate);
+
+  return (
+    groups.inProgress.length === 0 &&
+    groups.overdue.length === 0 &&
+    groups.today.length === 0
+  );
+}
+
 export function getDailyEstimatedMinutes(tasks: Task[]) {
   return Math.round(
     tasks.reduce(

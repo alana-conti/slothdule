@@ -10,10 +10,12 @@ import {
   deleteTask,
   getTask,
   listCategories,
+  listTasks,
   markRewardRedemptionDelivered,
   updateTask,
   redeemReward,
 } from "@/features/tasks/data";
+import { isDayComplete } from "@/features/tasks/today";
 import {
   taskPriorities,
   taskStatuses,
@@ -151,6 +153,16 @@ export async function createTaskAction(
 
 export type TaskActionResult =
   | { ok: true; title: string; leavesAwarded: number }
+  | { ok: false; error: string };
+
+export type TaskStatusActionResult =
+  | {
+      ok: true;
+      title: string;
+      leavesAwarded: number;
+      /** A conclusão fechou o dia: nada mais aberto para hoje. */
+      dayComplete: boolean;
+    }
   | { ok: false; error: string };
 
 export type SimpleActionResult = { ok: true } | { ok: false; error: string };
@@ -313,19 +325,30 @@ export async function updateTaskAction(
   }
 }
 
+/** Só enfeita a conclusão (som de dia completo): falhar aqui não é erro. */
+async function checkDayComplete(taskId: string) {
+  try {
+    return isDayComplete(await listTasks(), taskId);
+  } catch {
+    return false;
+  }
+}
+
 /** Mudança de status a partir da lista: sem redirecionar, para manter a tela. */
 export async function changeTaskStatusAction(
   taskId: string,
   status: string,
   /** Só vale ao ir para "aguardando": o motivo da pausa (opcional). */
   pauseReason?: string | null,
-): Promise<TaskActionResult> {
+): Promise<TaskStatusActionResult> {
   try {
     const result = await applyTaskStatus(taskId, status, pauseReason);
+    const dayComplete =
+      status === "done" ? await checkDayComplete(taskId) : false;
 
     revalidatePath("/", "layout");
 
-    return { ok: true, ...result };
+    return { ok: true, ...result, dayComplete };
   } catch (error) {
     return {
       ok: false,

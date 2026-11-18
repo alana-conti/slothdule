@@ -1,4 +1,9 @@
+"use client";
+
+import type { FormEvent } from "react";
+
 import { updateTaskStatusAction } from "@/features/tasks/actions";
+import { playCompletionSound } from "@/lib/audio/sounds";
 import type { TaskStatus } from "@/types/tasks";
 
 type TaskStatusControlProps = {
@@ -20,10 +25,20 @@ export function TaskStatusControl({
   status,
   returnTo,
 }: TaskStatusControlProps) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const next = new FormData(event.currentTarget).get("status");
+
+    // O som sai no clique; o formulário segue para o servidor normalmente.
+    if (next === "done" && status !== "done") {
+      playCompletionSound();
+    }
+  }
+
   return (
     <form
       action={updateTaskStatusAction}
       className="flex items-center"
+      onSubmit={handleSubmit}
     >
       <input name="taskId" type="hidden" value={taskId} />
       <input name="returnTo" type="hidden" value={returnTo} />
