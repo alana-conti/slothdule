@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import { getHabitToday, listHabits } from "@/features/habits/data";
 import { HabitDayRow } from "@/features/habits/habit-day-row";
 import { PageNotice } from "@/features/habits/page-notice";
+import { NewHabitButton } from "@/features/habits/new-habit-button";
 import { RoutineTabs } from "@/features/habits/routine-tabs";
 import { habitStages, type Habit, type HabitToday } from "@/types/habits";
-import { sortHabitsForDay, stageLabels, stagePluralLabels } from "@/lib/habits";
+import { isInFormation, sortHabitsForDay, stageLabels, stagePluralLabels } from "@/lib/habits";
 import { getCurrentUser } from "@/lib/api/server";
 
 type RoutinePageProps = {
@@ -83,6 +84,7 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
         getHabitToday(),
     ]);
 
+    const inFormation = habits.filter((habit) => isInFormation(habit.stage)).length;
     const todayHabits = sortHabitsForDay(habits.filter((habit) => habit.scheduledToday));
     const capPercent = Math.round((today.leavesEarned / today.leavesCap) * 100);
     const capReached = today.leavesEarned >= today.leavesCap;
@@ -104,15 +106,15 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
                             {formatLongDate(today.date)}
                         </p>
                         <div className="mt-5 flex flex-wrap gap-2">
-                            <Link
+                            <NewHabitButton
                                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-semibold text-sloth-forest transition hover:bg-sloth-beige focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
-                                href="/routine/new"
+                                inFormation={inFormation}
                             >
                                 <svg aria-hidden="true" className="size-[18px]" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" viewBox="0 0 24 24">
                                     <path d="M12 5v14M5 12h14" />
                                 </svg>
                                 Novo hábito
-                            </Link>
+                            </NewHabitButton>
                         </div>
                     </div>
                     <div className="flex flex-[0_1_24rem] items-end gap-3">
@@ -224,12 +226,12 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
                             {habits.length === 0 ? (
                                 <>
                                     <p>Seu jardim ainda está vazio.</p>
-                                    <Link
+                                    <NewHabitButton
                                         className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-sloth-moss px-4 font-semibold text-white transition hover:bg-sloth-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
-                                        href="/routine/new"
+                                        inFormation={inFormation}
                                     >
                                         Plantar o primeiro hábito
-                                    </Link>
+                                    </NewHabitButton>
                                 </>
                             ) : (
                                 <p>Nenhum hábito na agenda de hoje.</p>

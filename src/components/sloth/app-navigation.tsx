@@ -126,7 +126,7 @@ const calendar: NavItem = {
 };
 const routineOverview: NavItem = {
     activeExact: ["/routine"],
-    activeFor: ["/routine/new"],
+    activeFor: [],
     href: "/routine",
     icon: icons.sprout,
     label: "Visão geral",

@@ -1,10 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, type FormEvent } from "react";
 
-import { createHabitAction } from "@/features/habits/actions";
 import { formatWeekdays, getStageThresholds, periodLabels } from "@/lib/habits";
 import { habitPeriods, type HabitKind, type HabitPeriod } from "@/types/habits";
 
@@ -31,9 +29,7 @@ function segmentClass(active: boolean) {
     }`;
 }
 
-function SubmitButton() {
-    const { pending } = useFormStatus();
-
+function SubmitButton({ pending }: { pending: boolean }) {
     return (
         <button
             className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-sloth-moss px-5 text-base font-semibold text-white transition hover:bg-sloth-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest disabled:opacity-60 sm:w-auto"
@@ -46,10 +42,13 @@ function SubmitButton() {
 }
 
 type NewHabitFormProps = {
+    /** Hábitos em broto ou muda: a partir de 2, um aviso gentil aparece. */
     inFormation: number;
+    onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+    pending: boolean;
 };
 
-export function NewHabitForm({ inFormation }: NewHabitFormProps) {
+export function NewHabitForm({ inFormation, onSubmit, pending }: NewHabitFormProps) {
     const [kind, setKind] = useState<HabitKind>("do");
     const [weekdays, setWeekdays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
     const [when, setWhen] = useState<When>("any");
@@ -65,11 +64,12 @@ export function NewHabitForm({ inFormation }: NewHabitFormProps) {
     }
 
     return (
-        <form action={createHabitAction} className="grid gap-6">
+        <form className="grid gap-6" onSubmit={onSubmit}>
             <label className="block text-sm font-medium text-sloth-ink">
                 {kind === "avoid" ? "O que você quer evitar?" : "Que hábito você quer cultivar?"}
                 <input
                     autoComplete="off"
+                    autoFocus
                     className={inputClass}
                     maxLength={120}
                     name="title"
@@ -227,7 +227,7 @@ export function NewHabitForm({ inFormation }: NewHabitFormProps) {
             ) : null}
 
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <SubmitButton />
+                <SubmitButton pending={pending} />
             </div>
         </form>
     );

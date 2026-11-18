@@ -72,27 +72,19 @@ function parseHabitForm(formData: FormData): HabitInput {
     return { kind: kind as HabitKind, period, timeOfDay, title, weekdays };
 }
 
-export async function createHabitAction(formData: FormData) {
-    let title = "";
+export type CreateHabitActionResult =
+    | { ok: true; habitId: string; title: string }
+    | { ok: false; error: string };
 
+export async function createHabitAction(formData: FormData): Promise<CreateHabitActionResult> {
     try {
-        const input = parseHabitForm(formData);
-        title = input.title;
-        await createHabit(input);
-    } catch (error) {
-        redirect(
-            `/routine/new?error=${encodeURIComponent(
-                errorMessage(error, "Não foi possível plantar o hábito."),
-            )}`,
-        );
-    }
+        const habit = await createHabit(parseHabitForm(formData));
+        revalidatePath("/", "layout");
 
-    revalidatePath("/routine", "layout");
-    redirect(
-        `/routine?message=${encodeURIComponent(
-            `“${title}” foi plantado. Um cuidado de cada vez.`,
-        )}`,
-    );
+        return { habitId: habit.id, ok: true, title: habit.title };
+    } catch (error) {
+        return { error: errorMessage(error, "Não foi possível plantar o hábito."), ok: false };
+    }
 }
 
 export async function setHabitCheckinAction(

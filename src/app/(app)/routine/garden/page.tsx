@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { listHabits } from "@/features/habits/data";
 import { PageNotice } from "@/features/habits/page-notice";
 import { PlantBadge } from "@/features/habits/plant-icon";
+import { NewHabitButton } from "@/features/habits/new-habit-button";
 import { RoutineTabs } from "@/features/habits/routine-tabs";
 import {
     HABITS_IN_FORMATION_HINT,
@@ -163,15 +164,15 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                         <p className="mt-2 max-w-md text-sm leading-relaxed text-sloth-muted">
                             Cada dia cuidado faz a planta crescer. Faltas soltas não tiram nada, e folga nunca conta como falta.
                         </p>
-                        <Link
+                        <NewHabitButton
                             className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-semibold text-sloth-forest transition hover:bg-sloth-beige focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
-                            href="/routine/new"
+                            inFormation={inFormation}
                         >
                             <svg aria-hidden="true" className="size-[18px]" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" viewBox="0 0 24 24">
                                 <path d="M12 5v14M5 12h14" />
                             </svg>
                             Plantar hábito
-                        </Link>
+                        </NewHabitButton>
                     </div>
                     <div className="flex flex-[0_1_24rem] items-end gap-3">
                         <p className="flex-1 rounded-[18px_18px_4px_18px] border border-sloth-leaf/30 bg-sloth-leaf/10 px-4 py-3.5 text-sm leading-relaxed text-sloth-forest">
@@ -231,12 +232,12 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 ) : (
                     <div className="rounded-3xl border border-dashed border-sloth-border px-5 py-10 text-center text-sm text-sloth-muted">
                         <p>Nenhuma planta ainda.</p>
-                        <Link
+                        <NewHabitButton
                             className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-sloth-moss px-4 font-semibold text-white transition hover:bg-sloth-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
-                            href="/routine/new"
+                            inFormation={inFormation}
                         >
                             Plantar o primeiro hábito
-                        </Link>
+                        </NewHabitButton>
                     </div>
                 )}
             </div>
