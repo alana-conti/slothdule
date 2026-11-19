@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { E2E_TITLE_PREFIX, statusToast } from "./fixtures";
+import { API_URL, E2E_TITLE_PREFIX, statusToast } from "./fixtures";
 
 /** Planta um hábito pelo pop-up da Visão geral e fecha o toast de confirmação. */
 async function plantHabit(page: Page, title: string) {
@@ -138,5 +138,72 @@ test.describe("rotina e hábitos", () => {
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(page.getByText("Lembrete no horário")).toBeVisible();
   });
-});
 
+  test("encadeia hábitos numa rotina e fecha o dia no passo a passo", async ({ page }) => {
+    const stamp = Date.now();
+    const first = `${E2E_TITLE_PREFIX} Água ${stamp}`;
+    const second = `${E2E_TITLE_PREFIX} Alongar ${stamp}`;
+    const routineName = `${E2E_TITLE_PREFIX} Manhã ${stamp}`;
+
+    // O bônus pede todas as rotinas do dia completas: rotinas e2e que sobraram
+    // de uma execução interrompida atrapalhariam.
+    const stale = (await (await page.request.get(`${API_URL}/routines`)).json()) as Array<{
+      id: string;
+      name: string;
+    }>;
+    for (const routine of stale.filter((item) => item.name.startsWith(E2E_TITLE_PREFIX))) {
+      await page.request.delete(`${API_URL}/routines/${routine.id}`);
+    }
+
+    await plantHabit(page, first);
+    await plantHabit(page, second);
+
+    await page.getByRole("button", { name: "Nova rotina" }).click();
+    const dialog = page.getByRole("dialog", { name: "Encadear hábitos" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("Nome da rotina").fill(routineName);
+    await dialog.getByLabel("Começa depois de quê?").fill("Depois de acordar");
+    // Adiciona fora de ordem e acerta com "Subir".
+    await dialog.getByRole("button", { name: second, exact: true }).click();
+    await dialog.getByRole("button", { name: first, exact: true }).click();
+    await dialog.getByRole("button", { name: `Subir “${first}”` }).click();
+    await dialog.getByRole("button", { name: "Criar rotina" }).click();
+
+    await expect(dialog).toBeHidden();
+    const created = statusToast(page, "Rotina criada");
+    await created.getByRole("button", { name: "Fechar aviso" }).click();
+
+    const card = page.getByRole("article", { name: routineName });
+    await expect(card).toContainText("Depois de acordar · 2 passos");
+    await expect(card.getByRole("link", { name: /Água|Alongar/ })).toHaveText([first, second]);
+
+    await card.getByRole("link", { name: `Passo a passo: ${routineName}` }).click();
+    await expect(page).toHaveURL(/\/routine\/routines\//);
+    await expect(page.getByRole("heading", { level: 1, name: routineName })).toBeVisible();
+    await expect(page.getByText("Passo 1 de 2")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: first })).toBeVisible();
+    await page.getByRole("button", { name: "Feito" }).click();
+
+    await expect(page.getByText("Passo 2 de 2")).toBeVisible();
+    await expect(page.getByText(`Depois de “${first}”`)).toBeVisible();
+    await page.getByRole("button", { name: "Feito" }).click();
+
+    await expect(page.getByRole("heading", { name: `${routineName}: completa` })).toBeVisible();
+    // A conta de teste só tem rotinas e2e: com esta completa, o dia fecha.
+    await expect(page.getByText(/Rotinas de hoje completas: \+2 Folhinhas de bônus/)).toBeVisible();
+
+    await page.getByRole("link", { name: "Voltar para a Rotina", exact: true }).click();
+    await expect(page).toHaveURL(/\/routine$/);
+    await page.waitForLoadState("networkidle");
+    await expect(card).toContainText("completa hoje");
+
+    // Apagar a rotina deixa os hábitos soltos.
+    await card.getByRole("button", { name: `Editar ${routineName}` }).click();
+    const editDialog = page.getByRole("dialog", { name: routineName });
+    await editDialog.getByRole("button", { name: "Apagar rotina" }).click();
+    await editDialog.getByRole("button", { name: "Apagar", exact: true }).click();
+    await expect(statusToast(page, "Rotina apagada")).toBeVisible();
+    await expect(card).toHaveCount(0);
+    await expect(page.getByRole("link", { name: first })).toBeVisible();
+  });
+});

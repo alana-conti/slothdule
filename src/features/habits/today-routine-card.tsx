@@ -2,11 +2,17 @@ import Link from "next/link";
 
 import { HabitCompactRow } from "@/features/habits/habit-compact-row";
 import { LeafGlyph, PlantIcon } from "@/features/habits/plant-icon";
-import { groupHabitsForDay } from "@/lib/habits";
-import type { Habit, HabitToday } from "@/types/habits";
+import {
+    getRoutineBonusState,
+    groupHabitsForDay,
+    routineBonusMessage,
+    splitHabitsByRoutine,
+} from "@/lib/habits";
+import type { Habit, HabitToday, Routine } from "@/types/habits";
 
 type TodayRoutineCardProps = {
     habits: Habit[];
+    routines: Routine[];
     today: HabitToday;
 };
 
@@ -14,8 +20,14 @@ type TodayRoutineCardProps = {
  * "Rotina de hoje" na tela Hoje: compacta e separada das tarefas, fora da
  * carga do dia e dos atrasados. Sem hábitos na agenda de hoje, não aparece.
  */
-export function TodayRoutineCard({ habits, today }: TodayRoutineCardProps) {
+export function TodayRoutineCard({ habits, routines, today }: TodayRoutineCardProps) {
     const groups = groupHabitsForDay(habits);
+    const day = splitHabitsByRoutine(routines, habits);
+    const bonusMessage = routineBonusMessage(
+        getRoutineBonusState(day.routines, today.routineBonusEarned),
+    );
+    // O passo a passo leva para a primeira rotina que ainda tem passo aberto.
+    const nextRoutine = day.routines.find((routineDay) => routineDay.pending > 0)?.routine;
 
     if (groups.scheduled === 0) {
         return null;
@@ -86,6 +98,28 @@ export function TodayRoutineCard({ habits, today }: TodayRoutineCardProps) {
                     ))}
                 </ul>
             )}
+
+            {bonusMessage || nextRoutine ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-sloth-card/70 px-3 py-2">
+                    {bonusMessage ? (
+                        <p className="min-w-0 flex-[1_1_16rem] text-[13px] leading-relaxed text-sloth-forest">
+                            {bonusMessage}
+                        </p>
+                    ) : null}
+                    {nextRoutine ? (
+                        <Link
+                            className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-sloth-moss px-3 text-[13px] font-semibold text-white transition hover:bg-sloth-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
+                            aria-label={`Passo a passo: ${nextRoutine.name}`}
+                            href={`/routine/routines/${nextRoutine.id}?from=today`}
+                        >
+                            <svg aria-hidden="true" className="size-3.5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7Z" />
+                            </svg>
+                            Passo a passo
+                        </Link>
+                    ) : null}
+                </div>
+            ) : null}
 
             {handled.length > 0 ? (
                 <details className="group mt-3">

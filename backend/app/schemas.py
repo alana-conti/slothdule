@@ -336,6 +336,8 @@ class HabitOut(BaseModel):
     scheduled_today: bool
     today_status: HabitCheckinStatus | None = None
     today_leaves: int
+    routine_id: UUID | None = None
+    routine_position: int | None = None
 
 
 class HabitStageChangeOut(BaseModel):
@@ -362,6 +364,8 @@ class HabitTodayOut(BaseModel):
     scheduled: int
     done: int
     rest: int
+    routine_bonus: int
+    routine_bonus_earned: bool
 
 
 class HabitCheckinIn(BaseModel):
@@ -373,6 +377,48 @@ class HabitCheckinResultOut(BaseModel):
     leaves_awarded: int
     leaves_today: int
     leaves_cap: int
+    # +2 quando o cuidado fechou as rotinas do dia; -2 quando desfazer reabriu.
+    routine_bonus_change: int = 0
+
+
+# --- Rotinas encadeadas ---
+class RoutineIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    anchor: str | None = Field(default=None, max_length=80)
+    # Passos em ordem. Um hábito está em no máximo uma rotina: entrar nesta
+    # tira o hábito de onde estava.
+    habit_ids: list[UUID] = Field(min_length=1, max_length=12)
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dê um nome à rotina.")
+        return value
+
+    @field_validator("anchor")
+    @classmethod
+    def _strip_anchor(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+    @field_validator("habit_ids")
+    @classmethod
+    def _unique_steps(cls, value: list[UUID]) -> list[UUID]:
+        if len(set(value)) != len(value):
+            raise ValueError("Cada hábito entra uma vez só na rotina.")
+        return value
+
+
+class RoutineOut(BaseModel):
+    id: UUID
+    name: str
+    anchor: str | None = None
+    habit_ids: list[UUID]
+    created_at: datetime
 
 
 # --- Web Push ---

@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createHabit, deleteHabit, setHabitCheckin, type CheckinResult } from "@/features/habits/data";
+import {
+    createHabit,
+    createRoutine,
+    deleteHabit,
+    deleteRoutine,
+    setHabitCheckin,
+    updateRoutine,
+    type CheckinResult,
+} from "@/features/habits/data";
 import {
     habitKinds,
     habitPeriods,
@@ -11,6 +19,7 @@ import {
     type HabitInput,
     type HabitKind,
     type HabitPeriod,
+    type RoutineInput,
 } from "@/types/habits";
 
 export type HabitCheckinActionResult =
@@ -125,4 +134,62 @@ export async function deleteHabitAction(habitId: string) {
             "Hábito removido. As Folhinhas que ele rendeu continuam com você.",
         )}`,
     );
+}
+
+const ROUTINE_MAX_STEPS = 12;
+
+function parseRoutineForm(formData: FormData): RoutineInput {
+    const name = text(formData, "name");
+
+    if (!name) {
+        throw new Error("Dê um nome à rotina.");
+    }
+
+    // Os passos chegam na ordem em que aparecem no formulário.
+    const habitIds = formData
+        .getAll("habitIds")
+        .filter((value): value is string => typeof value === "string" && value.length > 0);
+
+    if (habitIds.length === 0) {
+        throw new Error("Escolha pelo menos um hábito para a rotina.");
+    }
+
+    if (habitIds.length > ROUTINE_MAX_STEPS) {
+        throw new Error(`Uma rotina tem no máximo ${ROUTINE_MAX_STEPS} passos.`);
+    }
+
+    return { anchor: text(formData, "anchor") || null, habitIds, name };
+}
+
+export type RoutineActionResult =
+    | { ok: true; routineId: string; name: string }
+    | { ok: false; error: string };
+
+/** Cria a rotina, ou atualiza quando `routineId` vem no formulário. */
+export async function saveRoutineAction(formData: FormData): Promise<RoutineActionResult> {
+    try {
+        const input = parseRoutineForm(formData);
+        const routineId = text(formData, "routineId");
+        const routine = routineId
+            ? await updateRoutine(routineId, input)
+            : await createRoutine(input);
+        revalidatePath("/", "layout");
+
+        return { name: routine.name, ok: true, routineId: routine.id };
+    } catch (error) {
+        return { error: errorMessage(error, "Não foi possível salvar a rotina."), ok: false };
+    }
+}
+
+export async function deleteRoutineAction(
+    routineId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+    try {
+        await deleteRoutine(routineId);
+        revalidatePath("/", "layout");
+
+        return { ok: true };
+    } catch (error) {
+        return { error: errorMessage(error, "Não foi possível apagar a rotina."), ok: false };
+    }
 }

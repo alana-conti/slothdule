@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { getHabit } from "@/features/habits/data";
+import { getHabit, listRoutines } from "@/features/habits/data";
 import { DeleteHabitControl } from "@/features/habits/delete-habit-control";
 import { PageNotice } from "@/features/habits/page-notice";
 import { LeafGlyph, PlantBadge } from "@/features/habits/plant-icon";
@@ -161,11 +161,17 @@ export default async function HabitPage({ params, searchParams }: HabitPageProps
     }
 
     const [{ habitId }, { error }] = await Promise.all([params, searchParams]);
-    const habit = await getHabit(habitId);
+    const [habit, routines] = await Promise.all([
+        getHabit(habitId),
+        listRoutines().catch(() => []),
+    ]);
 
     if (!habit) {
         notFound();
     }
+
+    const routine = routines.find((item) => item.id === habit.routineId);
+    const routineStep = routine ? routine.habitIds.indexOf(habit.id) + 1 : 0;
 
     const resting = getRestingNotice(habit);
     const unit = habit.kind === "avoid" ? "dias cuidados" : "cuidados";
@@ -212,6 +218,14 @@ export default async function HabitPage({ params, searchParams }: HabitPageProps
                                     <svg aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
                                     Lembrete no horário
                                 </span>
+                            ) : null}
+                            {routine ? (
+                                <Link
+                                    className="inline-flex items-center gap-1 rounded-full bg-sloth-moss/12 px-2.5 py-1 text-[13px] text-sloth-forest hover:bg-sloth-moss/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
+                                    href="/routine"
+                                >
+                                    Passo {routineStep} · {routine.name}
+                                </Link>
                             ) : null}
                             <span className="inline-flex items-center gap-1 rounded-full bg-sloth-leaf/18 px-2.5 py-1 text-[13px] font-semibold text-sloth-forest">
                                 <span className="text-sloth-leaf">

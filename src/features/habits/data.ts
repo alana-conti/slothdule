@@ -12,6 +12,8 @@ import type {
     HabitStageChange,
     HabitToday,
     HabitDayStatus,
+    Routine,
+    RoutineInput,
 } from "@/types/habits";
 
 type HabitRow = {
@@ -36,6 +38,8 @@ type HabitRow = {
     scheduled_today: boolean;
     today_status: HabitCheckinStatus | null;
     today_leaves: number;
+    routine_id: string | null;
+    routine_position: number | null;
 };
 
 type HabitDetailRow = HabitRow & {
@@ -51,6 +55,15 @@ type HabitTodayRow = {
     scheduled: number;
     done: number;
     rest: number;
+    routine_bonus: number;
+    routine_bonus_earned: boolean;
+};
+
+type RoutineRow = {
+    id: string;
+    name: string;
+    anchor: string | null;
+    habit_ids: string[];
 };
 
 export type CheckinResult = {
@@ -58,6 +71,8 @@ export type CheckinResult = {
     leavesAwarded: number;
     leavesToday: number;
     leavesCap: number;
+    /** +2 quando o cuidado fechou as rotinas do dia; -2 quando desfazer reabriu. */
+    routineBonusChange: number;
 };
 
 type CheckinResultRow = {
@@ -65,6 +80,7 @@ type CheckinResultRow = {
     leaves_awarded: number;
     leaves_today: number;
     leaves_cap: number;
+    routine_bonus_change: number;
 };
 
 async function requireUser() {
@@ -91,6 +107,8 @@ function mapHabit(row: HabitRow): Habit {
         period: row.period,
         regressionAfter: row.regression_after,
         remind: row.remind,
+        routineId: row.routine_id,
+        routinePosition: row.routine_position,
         scheduledToday: row.scheduled_today,
         stage: row.stage,
         startDate: row.start_date,
@@ -131,6 +149,8 @@ export async function getHabitToday(): Promise<HabitToday> {
         leavesCap: row.leaves_cap,
         leavesEarned: row.leaves_earned,
         rest: row.rest,
+        routineBonus: row.routine_bonus,
+        routineBonusEarned: row.routine_bonus_earned,
         scheduled: row.scheduled,
     };
 }
@@ -198,5 +218,52 @@ export async function setHabitCheckin(
         leavesAwarded: row.leaves_awarded,
         leavesCap: row.leaves_cap,
         leavesToday: row.leaves_today,
+        routineBonusChange: row.routine_bonus_change,
     };
+}
+
+function mapRoutine(row: RoutineRow): Routine {
+    return { anchor: row.anchor, habitIds: row.habit_ids, id: row.id, name: row.name };
+}
+
+function toRoutinePayload(input: RoutineInput) {
+    return { anchor: input.anchor, habit_ids: input.habitIds, name: input.name };
+}
+
+export async function listRoutines(): Promise<Routine[]> {
+    await requireUser();
+    const rows = await apiJson<RoutineRow[]>("/routines");
+
+    return rows.map(mapRoutine);
+}
+
+export async function createRoutine(input: RoutineInput): Promise<Routine> {
+    await requireUser();
+    const row = await apiJson<RoutineRow>("/routines", {
+        body: JSON.stringify(toRoutinePayload(input)),
+        method: "POST",
+    });
+
+    return mapRoutine(row);
+}
+
+export async function updateRoutine(routineId: string, input: RoutineInput): Promise<Routine> {
+    await requireUser();
+    const row = await apiJson<RoutineRow>(`/routines/${encodeURIComponent(routineId)}`, {
+        body: JSON.stringify(toRoutinePayload(input)),
+        method: "PATCH",
+    });
+
+    return mapRoutine(row);
+}
+
+export async function deleteRoutine(routineId: string) {
+    await requireUser();
+    const response = await apiFetch(`/routines/${encodeURIComponent(routineId)}`, {
+        method: "DELETE",
+    });
+
+    if (!response.ok) {
+        throw new Error("Não foi possível apagar a rotina.");
+    }
 }

@@ -2,13 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getHabitToday, listHabits } from "@/features/habits/data";
+import { getHabitToday, listHabits, listRoutines } from "@/features/habits/data";
 import { HabitDayRow } from "@/features/habits/habit-day-row";
 import { PageNotice } from "@/features/habits/page-notice";
 import { NewHabitButton } from "@/features/habits/new-habit-button";
+import { RoutineButton } from "@/features/habits/routine-button";
+import { RoutineChainCard } from "@/features/habits/routine-chain-card";
+import type { RoutineHabitOption } from "@/features/habits/routine-events";
 import { RoutineTabs } from "@/features/habits/routine-tabs";
 import { habitStages, type Habit, type HabitToday } from "@/types/habits";
-import { isInFormation, sortHabitsForDay, stageLabels, stagePluralLabels } from "@/lib/habits";
+import {
+    getRoutineBonusState,
+    isInFormation,
+    routineBonusMessage,
+    sortHabitsForDay,
+    splitHabitsByRoutine,
+    stageLabels,
+    stagePluralLabels,
+} from "@/lib/habits";
 import { getCurrentUser } from "@/lib/api/server";
 
 type RoutinePageProps = {
@@ -78,14 +89,27 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
         redirect("/login");
     }
 
-    const [{ error, message }, habits, today] = await Promise.all([
+    const [{ error, message }, habits, today, routines] = await Promise.all([
         searchParams,
         listHabits(),
         getHabitToday(),
+        listRoutines(),
     ]);
 
     const inFormation = habits.filter((habit) => isInFormation(habit.stage)).length;
-    const todayHabits = sortHabitsForDay(habits.filter((habit) => habit.scheduledToday));
+    const todayHabits = habits.filter((habit) => habit.scheduledToday);
+    const day = splitHabitsByRoutine(routines, habits);
+    const loose = sortHabitsForDay(day.loose);
+    const bonusMessage = routineBonusMessage(
+        getRoutineBonusState(day.routines, today.routineBonusEarned),
+    );
+    const bonusEarned = today.routineBonusEarned;
+    const habitOptions: RoutineHabitOption[] = habits.map((habit) => ({
+        id: habit.id,
+        routineId: habit.routineId,
+        stage: habit.stage,
+        title: habit.title,
+    }));
     const capPercent = Math.round((today.leavesEarned / today.leavesCap) * 100);
     const capReached = today.leavesEarned >= today.leavesCap;
 
@@ -115,6 +139,18 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
                                 </svg>
                                 Novo hábito
                             </NewHabitButton>
+                            <RoutineButton
+                                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-semibold text-sloth-forest transition hover:bg-sloth-beige focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
+                                habits={habitOptions}
+                                routines={routines}
+                            >
+                                <svg aria-hidden="true" className="size-[18px]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" viewBox="0 0 24 24">
+                                    <circle cx="6" cy="6" r="2.5" />
+                                    <circle cx="6" cy="18" r="2.5" />
+                                    <path d="M6 8.5v7M11 6h9M11 18h9M11 12h6" />
+                                </svg>
+                                Nova rotina
+                            </RoutineButton>
                         </div>
                     </div>
                     <div className="flex flex-[0_1_24rem] items-end gap-3">
@@ -172,7 +208,9 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
                         <p className="mt-2 text-sm text-sloth-muted">
                             {capReached
                                 ? "Teto de hoje alcançado. As plantas continuam crescendo."
-                                : `Até ${today.leavesCap} por dia vêm dos hábitos.`}
+                                : routines.length > 0
+                                  ? `Até ${today.leavesCap} por dia vêm dos hábitos. O bônus de rotinas fica fora do teto.`
+                                  : `Até ${today.leavesCap} por dia vêm dos hábitos.`}
                         </p>
                     </article>
                     <article className="rounded-card border border-sloth-border bg-sloth-card p-6">
@@ -215,9 +253,57 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
                         </p>
                     </div>
 
-                    {todayHabits.length > 0 ? (
-                        <ul className="grid gap-2">
-                            {todayHabits.map((habit) => (
+                    {day.routines.length > 0 ? (
+                        <div className="grid items-start gap-5 xl:grid-cols-2">
+                            <div className="flex min-w-0 flex-col gap-3">
+                                {day.routines.map((routineDay) => (
+                                    <RoutineChainCard
+                                        day={today.date}
+                                        habitOptions={habitOptions}
+                                        key={routineDay.routine.id}
+                                        routineDay={routineDay}
+                                        routines={routines}
+                                    />
+                                ))}
+                                {bonusMessage ? (
+                                    <p
+                                        className={`rounded-2xl px-4 py-3 text-[13px] leading-relaxed text-sloth-forest ${
+                                            bonusEarned
+                                                ? "bg-sloth-leaf/15"
+                                                : "border border-sloth-border bg-sloth-card"
+                                        }`}
+                                        role="status"
+                                    >
+                                        {bonusMessage}
+                                    </p>
+                                ) : null}
+                            </div>
+
+                            <div className="min-w-0 rounded-3xl border border-sloth-border bg-sloth-card p-4">
+                                <div className="px-1 pb-3">
+                                    <h3 className="text-xs font-semibold tracking-[0.14em] text-sloth-forest uppercase">
+                                        Ao longo do dia
+                                    </h3>
+                                    <p className="mt-0.5 text-[13px] text-sloth-muted">
+                                        Hábitos soltos, com ou sem horário
+                                    </p>
+                                </div>
+                                {loose.length > 0 ? (
+                                    <ul className="grid grid-cols-1 gap-2">
+                                        {loose.map((habit) => (
+                                            <HabitDayRow day={today.date} habit={habit} key={habit.id} />
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="rounded-2xl border border-dashed border-sloth-border px-4 py-6 text-center text-sm text-sloth-muted">
+                                        Hoje, tudo está nas rotinas.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    ) : todayHabits.length > 0 ? (
+                        <ul className="grid grid-cols-1 gap-2">
+                            {loose.map((habit) => (
                                 <HabitDayRow day={today.date} habit={habit} key={habit.id} />
                             ))}
                         </ul>
@@ -238,6 +324,24 @@ export default async function RoutinePage({ searchParams }: RoutinePageProps) {
                             )}
                         </div>
                     )}
+
+                    {day.offToday.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-sloth-muted">
+                            <span>Sem passos hoje:</span>
+                            {day.offToday.map((routine) => (
+                                <RoutineButton
+                                    aria-label={`Editar ${routine.name}`}
+                                    className="inline-flex min-h-8 items-center rounded-lg px-2 font-semibold text-sloth-forest transition hover:bg-sloth-beige focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
+                                    habits={habitOptions}
+                                    key={routine.id}
+                                    routine={routine}
+                                    routines={routines}
+                                >
+                                    {routine.name}
+                                </RoutineButton>
+                            ))}
+                        </div>
+                    ) : null}
 
                     {habits.some((habit) => habit.kind === "avoid") ? (
                         <p className="text-[13px] text-sloth-muted">

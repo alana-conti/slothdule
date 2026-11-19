@@ -92,6 +92,7 @@ class LeafTransactionType(str, enum.Enum):
     reward_redemption = "reward_redemption"
     manual_adjustment = "manual_adjustment"
     habit_checkin = "habit_checkin"
+    routine_bonus = "routine_bonus"
 
 
 class HabitKind(str, enum.Enum):
@@ -519,6 +520,32 @@ class LeafTransaction(Base):
     )
 
 
+class Routine(Base):
+    """Rotina encadeada: uma lista ordenada de hábitos (os passos).
+
+    Os passos ficam em `habits.routine_id`/`routine_position`; um hábito está
+    em no máximo uma rotina.
+    """
+
+    __tablename__ = "routines"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Âncora em texto livre: "depois do café".
+    anchor: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), onupdate=_now(), nullable=False
+    )
+
+    __table_args__ = (Index("routines_user_idx", "user_id"),)
+
+
 class Habit(Base):
     """Hábito da Rotina (docs/11-rotina-e-habitos.md).
 
@@ -546,6 +573,11 @@ class Habit(Base):
     remind: Mapped[bool] = mapped_column(Boolean, server_default=text("false"), nullable=False)
     # Primeiro dia da agenda: faltas só contam a partir dele.
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # Passo de uma rotina encadeada (opcional). Sem rotina, é um hábito solto.
+    routine_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("routines.id", ondelete="SET NULL"), nullable=True
+    )
+    routine_position: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=_now(), nullable=False
     )
@@ -635,3 +667,23 @@ class HabitReminderDelivery(Base):
     __table_args__ = (
         UniqueConstraint("habit_id", "day", name="habit_reminder_deliveries_habit_day_unique"),
     )
+
+
+class RoutineBonus(Base):
+    """Bônus de rotinas do dia (+2, fora do teto): no máximo um por pessoa por dia."""
+
+    __tablename__ = "routine_bonuses"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    leaf_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leaf_transactions.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), nullable=False
+    )
+
+    __table_args__ = (UniqueConstraint("user_id", "day", name="routine_bonuses_user_day_unique"),)

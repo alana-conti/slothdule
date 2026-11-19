@@ -2,15 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
     formatProgress,
+    formatRoutineMeta,
     formatWeekdays,
     formatWhen,
     getRegressionAfter,
     getRestingNotice,
+    getRoutineBonusState,
     getStageProgress,
     getStageThresholds,
     groupHabitsForDay,
     isInFormation,
+    routineBonusMessage,
     sortHabitsForDay,
+    splitHabitsByRoutine,
 } from "./index";
 
 describe("getStageThresholds", () => {
@@ -146,5 +150,81 @@ describe("groupHabitsForDay", () => {
             rest: [],
             scheduled: 0,
         });
+    });
+});
+
+describe("splitHabitsByRoutine", () => {
+    type H = { id: string; scheduledToday: boolean; todayStatus: "done" | "rest" | null };
+    const h = (id: string, todayStatus: H["todayStatus"] = null, scheduledToday = true): H => ({
+        id,
+        scheduledToday,
+        todayStatus,
+    });
+    const morning = { anchor: "Depois de acordar", habitIds: ["c", "a", "off"], id: "r1", name: "Manhã" };
+    const night = { anchor: null, habitIds: ["n"], id: "r2", name: "Noite" };
+
+    it("mantém a ordem da rotina, só com os passos de hoje, e separa os soltos", () => {
+        const habits = [h("a", "done"), h("c"), h("off", null, false), h("loose"), h("n", null, false)];
+        const day = splitHabitsByRoutine([morning, night], habits);
+
+        expect(day.routines).toHaveLength(1);
+        expect(day.routines[0].steps.map((step) => step.id)).toEqual(["c", "a"]);
+        expect(day.routines[0]).toMatchObject({ complete: false, done: 1, pending: 1, rest: 0 });
+        expect(day.offToday.map((routine) => routine.id)).toEqual(["r2"]);
+        expect(day.loose.map((habit) => habit.id)).toEqual(["loose"]);
+    });
+
+    it("folga não completa a rotina", () => {
+        const day = splitHabitsByRoutine([morning], [h("a", "done"), h("c", "rest")]);
+
+        expect(day.routines[0]).toMatchObject({ complete: false, pending: 0, rest: 1 });
+    });
+
+    it("rotina completa quando todos os passos de hoje estão feitos", () => {
+        const day = splitHabitsByRoutine([morning], [h("a", "done"), h("c", "done"), h("off", null, false)]);
+
+        expect(day.routines[0].complete).toBe(true);
+    });
+});
+
+describe("getRoutineBonusState", () => {
+    it("diz quantos passos faltam, somando todas as rotinas", () => {
+        const state = getRoutineBonusState(
+            [
+                { pending: 1, rest: 0 },
+                { pending: 2, rest: 0 },
+            ],
+            false,
+        );
+
+        expect(state).toEqual({ status: "pending", stepsLeft: 3 });
+        expect(routineBonusMessage(state)).toBe(
+            "Faltam 3 passos para completar as rotinas de hoje e ganhar +2 de bônus.",
+        );
+        expect(routineBonusMessage({ status: "pending", stepsLeft: 1 })).toMatch(/^Falta 1 passo/);
+    });
+
+    it("um passo de folga segura o bônus do dia", () => {
+        expect(getRoutineBonusState([{ pending: 1, rest: 1 }], false)).toEqual({ status: "rest" });
+    });
+
+    it("quem decide se ganhou é o servidor", () => {
+        const state = getRoutineBonusState([{ pending: 1, rest: 0 }], true);
+
+        expect(state).toEqual({ status: "earned" });
+        expect(routineBonusMessage(state)).toContain("além do teto de 10");
+    });
+
+    it("sem rotina hoje, sem mensagem", () => {
+        expect(routineBonusMessage(getRoutineBonusState([], false))).toBeNull();
+    });
+});
+
+describe("formatRoutineMeta", () => {
+    it("junta a âncora e os passos", () => {
+        expect(formatRoutineMeta({ anchor: "Depois do café", habitIds: ["a", "b"] })).toBe(
+            "Depois do café · 2 passos",
+        );
+        expect(formatRoutineMeta({ anchor: null, habitIds: ["a", "b"] }, 1)).toBe("1 passo");
     });
 });

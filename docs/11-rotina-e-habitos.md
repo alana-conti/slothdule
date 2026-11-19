@@ -103,6 +103,9 @@ Base da decisão: Lally et al. (2009), mediana de 66 dias até a automaticidade 
 - **Bônus de rotinas**: **+2 Folhinhas uma vez por dia**, quando todas as rotinas agendadas para o dia têm todos os passos feitos. Não é por rotina: duas rotinas completas no mesmo dia continuam rendendo +2.
 - O bônus fica **fora do teto diário de 10** (ver 3.4).
 - Um passo de **folga não completa a rotina**: naquele dia não há bônus. A folga continua sem contar como falta para a planta (ver 3.7).
+- Os passos de um dia são os hábitos da rotina agendados para aquele dia; uma rotina sem passo no dia não conta. Hábitos soltos nunca seguram o bônus.
+- Desfazer um cuidado (ou trocá-lo por folga) devolve o bônus, como devolve as Folhinhas do cuidado. Editar ou apagar a rotina nunca tira um bônus já ganho.
+- Um hábito está em no máximo uma rotina; apagar a rotina deixa os hábitos soltos.
 
 ## 4. Pendente
 
@@ -119,9 +122,10 @@ Base da decisão: Lally et al. (2009), mediana de 66 dias até a automaticidade 
 
 Tabelas novas, sem reaproveitar `tasks`:
 
-- `habits`: título, tipo (fazer/evitar), dias da semana, horário opcional, período opcional, versão/meta atual, rotina e posição opcionais.
+- `habits`: título, tipo (fazer/evitar), dias da semana, horário opcional, período opcional, versão/meta atual, rotina e posição opcionais (`routine_id`, `routine_position`).
 - `habit_checkins`: um por hábito por dia (único), ligado à `leaf_transaction` gerada.
 - `routines`: nome, âncora opcional.
+- `routine_bonuses`: um por pessoa por dia (único), ligado à `leaf_transaction` do tipo `routine_bonus`.
 
 Estágio e sequência calculados por funções puras em `src/lib/habits/`, com testes Vitest, no mesmo padrão de `src/lib/rewards/`. RLS escopado por `auth.uid()`.
 
@@ -130,5 +134,5 @@ Estágio e sequência calculados por funções puras em `src/lib/habits/`, com t
 1. Hábito + check-in + estágio + Folhinhas. **Feita em 2026-11-18**: rotas `/routine` (Visão geral), `/routine/garden` (Jardim) e `/routine/habits/[id]`, com o novo hábito em pop-up (como o de nova tarefa); API `/habits` (`backend/app/routers/habits.py`); regras em `backend/app/services/habits.py` e `src/lib/habits/`. Check-in vale para hoje e os últimos 7 dias da agenda; desmarcar devolve as Folhinhas daquele cuidado. Ainda sem rotinas encadeadas, edição de hábito na tela e bônus de rotinas.
 2. Seção "Rotina de hoje" na tela Hoje. **Feita em 2026-11-19**: card compacto abaixo dos resumos do dia, com cuidados feitos de quantos, Folhinhas de hábitos/teto, o próximo cuidado em destaque, os demais pendentes marcáveis ali mesmo e os feitos/folgas recolhidos. Não entra na carga estimada nem nos atrasados; sem hábitos na agenda do dia, o card não aparece.
 3. Horário e lembretes. **Feita em 2026-11-19**: hábitos com horário específico aparecem na Linha do tempo (grupo "Rotina com horário", com o horário nos dias da agenda e o estado de hoje). Opção "Lembrar no horário" no novo hábito: um Web Push por dia, a partir do horário e por até 30 min, só se o hábito ainda não teve cuidado nem folga. Envio por `backend/app/services/reminders.py` (laço de 1 min dentro da API, `app/scheduler.py`); `habit_reminder_deliveries` garante no máximo um lembrete por hábito por dia. Inscrições em `/push/subscriptions`. Exige `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (gerar com `backend/scripts/generate_vapid_keys.py`); sem elas o push fica desligado. Lembretes de tarefa com canal `push` também saem pelo mesmo laço (`backend/app/services/task_reminders.py`): a partir de `remind_at` e por até 30 min, só se a tarefa não estiver concluída nem arquivada, com o link `/tasks/<id>`; `reminders.is_sent` é virado por um UPDATE atômico antes do envio (no máximo um envio, mesmo com vários processos) e volta a `false` quando o lembrete é remarcado.
-4. Rotinas encadeadas.
+4. Rotinas encadeadas. **Feita em 2026-11-19**: botão "Nova rotina" na Visão geral abre um pop-up com nome, âncora ("Começa depois de quê?") e os passos em ordem (subir, descer, tirar); o mesmo pop-up edita e apaga. Na Visão geral, "Hoje na rotina" mostra cada rotina como uma corrente de passos e, ao lado, "Ao longo do dia" com os hábitos soltos, mais o aviso do bônus (quantos passos faltam, folga ou completo). "Passo a passo" (`/routine/routines/[id]`) é o modo rotina: um passo por vez, com feito, folga hoje ou deixar para depois, e um resumo no fim. A Rotina de hoje, na tela Hoje, mostra o aviso do bônus e leva ao passo a passo. API `/routines` (`backend/app/routers/routines.py`); bônus em `backend/app/services/routines.py`.
 5. Sugestões de evolução.

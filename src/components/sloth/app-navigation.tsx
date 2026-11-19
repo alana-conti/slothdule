@@ -126,7 +126,8 @@ const calendar: NavItem = {
 };
 const routineOverview: NavItem = {
     activeExact: ["/routine"],
-    activeFor: [],
+    // O modo rotina (passo a passo) é parte da Visão geral.
+    activeFor: ["/routine/routines"],
     href: "/routine",
     icon: icons.sprout,
     label: "Visão geral",

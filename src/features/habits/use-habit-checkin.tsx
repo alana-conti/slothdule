@@ -44,25 +44,23 @@ export function useHabitCheckin(habit: Habit, day: string) {
                 onClick: () => apply(previous, "done"),
             };
 
+            let title = isAvoid ? "Hoje você conseguiu" : "Cuidado registrado";
+            let description = `+${result.leavesAwarded} ${result.leavesAwarded === 1 ? "Folhinha" : "Folhinhas"} por “${habit.title}”.`;
+
             if (grew) {
-                toast({
-                    action: undo,
-                    description: `“${habit.title}” virou ${stageLabels[result.habit.stage].toLowerCase()}. Agora rende +${result.habit.leavesPerCheckin} por cuidado.`,
-                    title: "A planta cresceu",
-                });
-            } else if (result.leavesAwarded > 0) {
-                toast({
-                    action: undo,
-                    description: `+${result.leavesAwarded} ${result.leavesAwarded === 1 ? "Folhinha" : "Folhinhas"} por “${habit.title}”.`,
-                    title: isAvoid ? "Hoje você conseguiu" : "Cuidado registrado",
-                });
-            } else {
-                toast({
-                    action: undo,
-                    description: `Teto de ${result.leavesCap} Folhinhas de hábitos alcançado hoje. A planta cresceu mesmo assim.`,
-                    title: "Cuidado registrado",
-                });
+                title = "A planta cresceu";
+                description = `“${habit.title}” virou ${stageLabels[result.habit.stage].toLowerCase()}. Agora rende +${result.habit.leavesPerCheckin} por cuidado.`;
+            } else if (result.leavesAwarded === 0) {
+                title = "Cuidado registrado";
+                description = `Teto de ${result.leavesCap} Folhinhas de hábitos alcançado hoje. A planta cresceu mesmo assim.`;
             }
+
+            if (result.routineBonusChange > 0) {
+                title = "Rotinas de hoje completas";
+                description = `${description} E +${result.routineBonusChange} de bônus pelas rotinas, além do teto.`;
+            }
+
+            toast({ action: undo, description, title });
         });
     }
 

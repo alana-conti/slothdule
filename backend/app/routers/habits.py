@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.deps import get_current_user, get_db
 from app.services import habits as rules
+from app.services import routines as chains
 
 router = APIRouter(prefix="/habits", tags=["habits"])
 
@@ -119,6 +120,8 @@ def _habit_out(
         "scheduled_today": rules.is_scheduled(today, habit.weekdays) and today >= habit.start_date,
         "today_status": today_row.status if today_row else None,
         "today_leaves": today_leaves,
+        "routine_id": habit.routine_id,
+        "routine_position": habit.routine_position,
     }
 
 
@@ -198,6 +201,8 @@ def today_summary(db: Session = Depends(get_db), user: models.User = Depends(get
         "scheduled": len(due),
         "done": sum(1 for r in rows if r.habit_id in due_ids and r.status == models.HabitCheckinStatus.done),
         "rest": sum(1 for r in rows if r.habit_id in due_ids and r.status == models.HabitCheckinStatus.rest),
+        "routine_bonus": chains.ROUTINE_BONUS,
+        "routine_bonus_earned": chains.bonus_for(db, user.id, today) is not None,
     }
 
 
@@ -261,6 +266,9 @@ def delete_habit(
     # As Folhinhas já ganhas continuam no saldo: só o vínculo com o check-in some.
     habit = _require_habit(db, user.id, habit_id)
     db.delete(habit)
+    db.flush()
+    # Se era o último passo pendente, as rotinas de hoje podem ter fechado.
+    chains.reconcile_bonus(db, user.id, rules.local_today(), allow_revoke=False)
     db.commit()
     return Response(status_code=204)
 
@@ -317,6 +325,8 @@ def set_checkin(
             db.flush()
             row.leaf_transaction_id = tx.id
 
+    db.flush()
+    bonus_change = chains.reconcile_bonus(db, user.id, day)
     db.commit()
     checkins = _checkins_by_habit(db, user.id, [habit.id])[habit.id]
     return {
@@ -324,6 +334,7 @@ def set_checkin(
         "leaves_awarded": awarded,
         "leaves_today": _leaves_earned_on(db, user.id, today),
         "leaves_cap": rules.DAILY_LEAF_CAP,
+        "routine_bonus_change": bonus_change,
     }
 
 
@@ -350,6 +361,8 @@ def clear_checkin(
         raise HTTPException(status_code=404, detail="Nada registrado nesse dia.")
     _drop_leaves(db, row)
     db.delete(row)
+    db.flush()
+    bonus_change = chains.reconcile_bonus(db, user.id, day)
     db.commit()
     checkins = _checkins_by_habit(db, user.id, [habit.id])[habit.id]
     return {
@@ -357,4 +370,5 @@ def clear_checkin(
         "leaves_awarded": 0,
         "leaves_today": _leaves_earned_on(db, user.id, today),
         "leaves_cap": rules.DAILY_LEAF_CAP,
+        "routine_bonus_change": bonus_change,
     }

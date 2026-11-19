@@ -5,9 +5,12 @@
  * Folhinhas; aqui ficam os mesmos limiares para a prévia do formulário e os
  * textos de apoio. Mudou uma regra? Mude nos dois lugares.
  */
-import type { Habit, HabitPeriod, HabitStage } from "@/types/habits";
+import type { Habit, HabitPeriod, HabitStage, Routine } from "@/types/habits";
 
 export const HABIT_DAILY_LEAF_CAP = 10;
+
+/** Bônus de rotinas: uma vez por dia, fora do teto (docs/11, seção 3.9). */
+export const ROUTINE_BONUS = 2;
 
 /** Quantos hábitos em broto ou muda cabem com folga ao mesmo tempo. */
 export const HABITS_IN_FORMATION_HINT = 2;
@@ -225,4 +228,118 @@ export function groupHabitsForDay<
         rest: today.filter((habit) => habit.todayStatus === "rest"),
         scheduled: today.length,
     };
+}
+
+type DayHabit = Pick<Habit, "id" | "scheduledToday" | "todayStatus">;
+
+export type RoutineDay<T> = {
+    routine: Routine;
+    /** Passos na agenda de hoje, na ordem da rotina. */
+    steps: T[];
+    done: number;
+    rest: number;
+    pending: number;
+    /** Todos os passos de hoje feitos (folga não completa). */
+    complete: boolean;
+};
+
+export type HabitsForDay<T> = {
+    /** Rotinas com pelo menos um passo hoje. */
+    routines: RoutineDay<T>[];
+    /** Rotinas sem passo na agenda de hoje. */
+    offToday: Routine[];
+    /** Hábitos de hoje fora de qualquer rotina. */
+    loose: T[];
+};
+
+/** Separa o dia em rotinas encadeadas (com os passos de hoje) e hábitos soltos. */
+export function splitHabitsByRoutine<T extends DayHabit>(
+    routines: Routine[],
+    habits: T[],
+): HabitsForDay<T> {
+    const byId = new Map(habits.map((habit) => [habit.id, habit]));
+    const inRoutine = new Set(routines.flatMap((routine) => routine.habitIds));
+    const days: RoutineDay<T>[] = [];
+    const offToday: Routine[] = [];
+
+    for (const routine of routines) {
+        const steps = routine.habitIds
+            .map((id) => byId.get(id))
+            .filter((habit): habit is T => habit !== undefined && habit.scheduledToday);
+
+        if (steps.length === 0) {
+            offToday.push(routine);
+            continue;
+        }
+
+        const done = steps.filter((habit) => habit.todayStatus === "done").length;
+        const rest = steps.filter((habit) => habit.todayStatus === "rest").length;
+
+        days.push({
+            complete: done === steps.length,
+            done,
+            pending: steps.length - done - rest,
+            rest,
+            routine,
+            steps,
+        });
+    }
+
+    return {
+        loose: habits.filter((habit) => habit.scheduledToday && !inRoutine.has(habit.id)),
+        offToday,
+        routines: days,
+    };
+}
+
+export type RoutineBonusState =
+    | { status: "none" }
+    | { status: "earned" }
+    | { status: "rest" }
+    | { status: "pending"; stepsLeft: number };
+
+/**
+ * Onde o bônus do dia está. `earned` vem do servidor (é quem paga); o resto
+ * sai do estado dos passos de hoje.
+ */
+export function getRoutineBonusState(
+    days: Array<Pick<RoutineDay<unknown>, "pending" | "rest">>,
+    earned: boolean,
+): RoutineBonusState {
+    if (earned) {
+        return { status: "earned" };
+    }
+
+    if (days.length === 0) {
+        return { status: "none" };
+    }
+
+    if (days.some((day) => day.rest > 0)) {
+        return { status: "rest" };
+    }
+
+    return { status: "pending", stepsLeft: days.reduce((sum, day) => sum + day.pending, 0) };
+}
+
+export function routineBonusMessage(state: RoutineBonusState): string | null {
+    switch (state.status) {
+        case "earned":
+            return `Rotinas de hoje completas. +${ROUTINE_BONUS} Folhinhas de bônus, além do teto de ${HABIT_DAILY_LEAF_CAP}.`;
+        case "rest":
+            return "Com um passo de folga, as rotinas não fecham hoje e o bônus fica para outro dia. O que você cuidou continua crescendo.";
+        case "pending":
+            return state.stepsLeft === 1
+                ? `Falta 1 passo para completar as rotinas de hoje e ganhar +${ROUTINE_BONUS} de bônus.`
+                : `Faltam ${state.stepsLeft} passos para completar as rotinas de hoje e ganhar +${ROUTINE_BONUS} de bônus.`;
+        default:
+            return null;
+    }
+}
+
+/** "Depois de acordar · 3 passos" (os passos de hoje, quando informados). */
+export function formatRoutineMeta(routine: Pick<Routine, "anchor" | "habitIds">, stepsToday?: number) {
+    const count = stepsToday ?? routine.habitIds.length;
+    const steps = count === 1 ? "1 passo" : `${count} passos`;
+
+    return routine.anchor ? `${routine.anchor} · ${steps}` : steps;
 }

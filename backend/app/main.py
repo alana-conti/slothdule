@@ -7,7 +7,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app import scheduler
 from app.config import settings
-from app.routers import attachments, auth, categories, clients, files, habits, projects, push, reminders, rewards, subtasks, tasks
+from app.routers import attachments, auth, categories, clients, files, habits, projects, push, reminders, rewards, routines, subtasks, tasks
 
 
 
@@ -58,6 +58,7 @@ app.include_router(reminders.item_router)
 app.include_router(attachments.router)
 app.include_router(attachments.item_router)
 app.include_router(habits.router)
+app.include_router(routines.router)
 app.include_router(push.router)
 app.include_router(rewards.router)
 app.include_router(rewards.leaves_router)

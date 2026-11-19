@@ -43,6 +43,9 @@ export type Habit = {
     scheduledToday: boolean;
     todayStatus: HabitCheckinStatus | null;
     todayLeaves: number;
+    /** Rotina encadeada da qual o hábito é um passo (ou `null`, solto). */
+    routineId: string | null;
+    routinePosition: number | null;
 };
 
 export type HabitStageChange = {
@@ -64,6 +67,9 @@ export type HabitToday = {
     scheduled: number;
     done: number;
     rest: number;
+    /** Valor do bônus de rotinas do dia (fora do teto). */
+    routineBonus: number;
+    routineBonusEarned: boolean;
 };
 
 export type HabitInput = {
@@ -73,4 +79,19 @@ export type HabitInput = {
     timeOfDay: string | null;
     period: HabitPeriod | null;
     remind: boolean;
+};
+
+/** Rotina encadeada: uma lista ordenada de hábitos (os passos). */
+export type Routine = {
+    id: string;
+    name: string;
+    /** Âncora em texto livre: "depois do café". */
+    anchor: string | null;
+    habitIds: string[];
+};
+
+export type RoutineInput = {
+    name: string;
+    anchor: string | null;
+    habitIds: string[];
 };
