@@ -128,7 +128,7 @@ Estágio e sequência calculados por funções puras em `src/lib/habits/`, com t
 ## 7. Fatias de implementação
 
 1. Hábito + check-in + estágio + Folhinhas. **Feita em 2026-11-18**: rotas `/routine` (Visão geral), `/routine/garden` (Jardim) e `/routine/habits/[id]`, com o novo hábito em pop-up (como o de nova tarefa); API `/habits` (`backend/app/routers/habits.py`); regras em `backend/app/services/habits.py` e `src/lib/habits/`. Check-in vale para hoje e os últimos 7 dias da agenda; desmarcar devolve as Folhinhas daquele cuidado. Ainda sem rotinas encadeadas, edição de hábito na tela e bônus de rotinas.
-2. Seção "Rotina de hoje" na tela Hoje.
+2. Seção "Rotina de hoje" na tela Hoje. **Feita em 2026-11-19**: card compacto abaixo dos resumos do dia, com cuidados feitos de quantos, Folhinhas de hábitos/teto, o próximo cuidado em destaque, os demais pendentes marcáveis ali mesmo e os feitos/folgas recolhidos. Não entra na carga estimada nem nos atrasados; sem hábitos na agenda do dia, o card não aparece.
 3. Horário e lembretes.
 4. Rotinas encadeadas.
 5. Sugestões de evolução.

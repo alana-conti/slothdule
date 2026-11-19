@@ -203,3 +203,26 @@ export function getRestingNotice(
         habit.stage === "muda" ? "a" : habit.stage === "arvore" ? "a" : "o"
     } ${label}, sem pressa.`;
 }
+
+export type HabitDayGroups<T> = {
+    /** Na agenda de hoje e ainda sem registro, na ordem do dia. */
+    pending: T[];
+    done: T[];
+    rest: T[];
+    /** Quantos estão na agenda de hoje (inclui folgas). */
+    scheduled: number;
+};
+
+/** Separa os hábitos de hoje em pendentes (na ordem do dia), feitos e folgas. */
+export function groupHabitsForDay<
+    T extends Pick<Habit, "period" | "scheduledToday" | "timeOfDay" | "title" | "todayStatus">,
+>(habits: T[]): HabitDayGroups<T> {
+    const today = sortHabitsForDay(habits.filter((habit) => habit.scheduledToday));
+
+    return {
+        done: today.filter((habit) => habit.todayStatus === "done"),
+        pending: today.filter((habit) => habit.todayStatus === null),
+        rest: today.filter((habit) => habit.todayStatus === "rest"),
+        scheduled: today.length,
+    };
+}

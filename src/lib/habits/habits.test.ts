@@ -8,6 +8,7 @@ import {
     getRestingNotice,
     getStageProgress,
     getStageThresholds,
+    groupHabitsForDay,
     isInFormation,
     sortHabitsForDay,
 } from "./index";
@@ -117,5 +118,33 @@ describe("getRestingNotice", () => {
 
     it("broto nunca desce, então não avisa", () => {
         expect(getRestingNotice({ missesInRow: 13, regressionAfter: 14, stage: "broto" })).toBeNull();
+    });
+});
+
+describe("groupHabitsForDay", () => {
+    const base = { period: null, scheduledToday: true, timeOfDay: null, todayStatus: null };
+
+    it("separa pendentes, feitos e folgas só da agenda de hoje", () => {
+        const groups = groupHabitsForDay([
+            { ...base, title: "Ler", timeOfDay: "22:00:00" },
+            { ...base, title: "Água", period: "morning" as const },
+            { ...base, title: "Alongar", todayStatus: "done" as const },
+            { ...base, title: "Caminhar", todayStatus: "rest" as const },
+            { ...base, title: "Inglês", scheduledToday: false },
+        ]);
+
+        expect(groups.pending.map((habit) => habit.title)).toEqual(["Água", "Ler"]);
+        expect(groups.done.map((habit) => habit.title)).toEqual(["Alongar"]);
+        expect(groups.rest.map((habit) => habit.title)).toEqual(["Caminhar"]);
+        expect(groups.scheduled).toBe(4);
+    });
+
+    it("fica vazio sem hábitos na agenda", () => {
+        expect(groupHabitsForDay([{ ...base, scheduledToday: false, title: "x" }])).toEqual({
+            done: [],
+            pending: [],
+            rest: [],
+            scheduled: 0,
+        });
     });
 });

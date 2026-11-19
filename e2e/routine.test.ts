@@ -1,6 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { E2E_TITLE_PREFIX, statusToast } from "./fixtures";
+
+/** Planta um hábito pelo pop-up da Visão geral e fecha o toast de confirmação. */
+async function plantHabit(page: Page, title: string) {
+  await page.goto("/routine");
+  // Sem hidratar, o clique no botão não abre o pop-up.
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Novo hábito" }).click();
+  const dialog = page.getByRole("dialog", { name: "Plantar um hábito" });
+  await dialog.getByLabel("Que hábito você quer cultivar?").fill(title);
+  await dialog.getByRole("button", { name: "Plantar hábito" }).click();
+  await expect(dialog).toBeHidden();
+  const planted = statusToast(page, "Hábito plantado");
+  await planted.getByRole("button", { name: "Fechar aviso" }).click();
+  await expect(planted).toBeHidden();
+}
 
 test.describe("rotina e hábitos", () => {
   test("planta um hábito, cuida dele hoje e acompanha no jardim", async ({ page }) => {
@@ -80,5 +95,24 @@ test.describe("rotina e hábitos", () => {
     await expect(
       row.getByRole("button", { name: `Hoje consegui evitar: ${title}` }),
     ).toBeEnabled();
+  });
+
+  test("cuida de um hábito pela Rotina de hoje, na tela Hoje", async ({ page }) => {
+    const title = `${E2E_TITLE_PREFIX} Alongar ${Date.now()}`;
+    await plantHabit(page, title);
+
+    await page.goto("/today");
+    await page.waitForLoadState("networkidle");
+    const card = page.getByRole("region", { name: "Rotina de hoje" });
+    await expect(card).toBeVisible();
+
+    await card.getByRole("button", { name: `Marcar como feito: ${title}` }).click();
+    await expect(statusToast(page, "Cuidado registrado")).toBeVisible();
+
+    // Feito, o hábito sai da lista e vai para os cuidados feitos (recolhidos).
+    await card.getByText(/cuidados? feitos?/).click();
+    await expect(
+      card.getByRole("button", { name: `Desmarcar “${title}”` }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });

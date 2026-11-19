@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
+import { getHabitToday, listHabits } from "@/features/habits/data";
+import { TodayRoutineCard } from "@/features/habits/today-routine-card";
 import { listCategories, listTasks } from "@/features/tasks/data";
 import { TaskRow } from "@/features/tasks/task-row";
 import {
@@ -310,10 +312,13 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
     redirect("/login");
   }
 
-  const [{ error, message }, categories, tasks] = await Promise.all([
+  const [{ error, message }, categories, tasks, routine] = await Promise.all([
     searchParams,
     listCategories(),
     listTasks(),
+    // A Rotina é um extra na tela Hoje: se a API de hábitos falhar, o resto
+    // da tela segue normal.
+    Promise.all([listHabits(), getHabitToday()]).catch(() => null),
   ]);
 
   const todayDate = getTodayDateKey();
@@ -433,6 +438,10 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             </p>
           </article>
         </section>
+
+        {routine ? (
+          <TodayRoutineCard habits={routine[0]} today={routine[1]} />
+        ) : null}
 
         <div className="mt-8 grid gap-7">
           <TaskSection
