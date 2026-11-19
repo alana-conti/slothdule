@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+
+import { TimelineHabits } from "@/components/timeline/timeline-habits";
+import type { Habit } from "@/types/habits";
 import type { Task, Category, Client, Project, TaskPriority, TaskStatus } from "@/types/tasks";
 
 type TimelineViewProps = {
+  /** Hábitos com horário específico (Rotina). */
+  habits?: Habit[];
   tasks: Task[];
   categories: Category[];
   clients: Client[];
@@ -45,7 +50,7 @@ function formatWeekday(date: Date): string {
   }).format(date).slice(0, 3);
 }
 
-export function TimelineView({ tasks, categories, clients, projects }: TimelineViewProps) {
+export function TimelineView({ habits = [], tasks, categories, clients, projects }: TimelineViewProps) {
   const [groupBy, setGroupBy] = useState<"category" | "client" | "project" | "status">("category");
   
   // Date window start (defaults to 7 days before today)
@@ -250,6 +255,8 @@ export function TimelineView({ tasks, categories, clients, projects }: TimelineV
               })}
             </div>
           </div>
+
+          <TimelineHabits days={days} habits={habits} todayTime={todayTime} />
 
           {/* Timeline Groups and Tasks */}
           {sortedGroupKeys.map((groupKey) => {

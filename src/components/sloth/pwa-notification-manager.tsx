@@ -2,18 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { enablePush, pushResultMessages, syncPush } from "@/features/notifications/push-client";
 import { pickMascotNotification } from "@/lib/mascot-notifications";
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
 
 export function PwaNotificationManager() {
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
@@ -30,15 +20,8 @@ export function PwaNotificationManager() {
       setPermission(Notification.permission);
 
       if (Notification.permission === "granted") {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          const sub = await registration.pushManager.getSubscription();
-          if (sub) {
-            console.log("Inscrição Push ativa:", sub.endpoint);
-          }
-        } catch (err) {
-          console.warn("Erro ao buscar inscrição push:", err);
-        }
+        // Mantém a inscrição deste aparelho registrada no backend (lembretes).
+        await syncPush();
       }
     };
 
@@ -50,39 +33,19 @@ export function PwaNotificationManager() {
     return () => clearTimeout(timer);
   }, []);
 
-  const subscribeToPush = async () => {
-    try {
-      setIsSubscribing(true);
-      const registration = await navigator.serviceWorker.ready;
-      
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (vapidKey) {
-        const sub = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        });
-        console.log("Inscrição Push ativa:", sub);
-      } else {
-        console.log("Inscrição Push simulada localmente (sem VAPID key).");
-      }
-    } catch (err) {
-      console.warn("Falha ao registrar inscrição push real:", err);
-    } finally {
-      setIsSubscribing(false);
-    }
-  };
-
-  const requestPermission = () => {
+  const requestPermission = async () => {
     if (permission === "unsupported") return;
 
-    Notification.requestPermission().then((perm) => {
-      setPermission(perm);
-      if (perm === "granted") {
-        subscribeToPush();
-        setMessage("Que bom! Notificações ativadas com calma. 🍃");
-        setTimeout(() => setMessage(null), 5000);
-      }
-    });
+    setIsSubscribing(true);
+    const result = await enablePush();
+    setIsSubscribing(false);
+    setPermission(Notification.permission);
+    setMessage(
+      result === "enabled"
+        ? "Que bom! Notificações ativadas com calma. 🍃"
+        : pushResultMessages[result],
+    );
+    setTimeout(() => setMessage(null), 6000);
   };
 
   const sendTestNotification = () => {

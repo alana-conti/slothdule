@@ -28,6 +28,19 @@ class Settings(BaseSettings):
     # Opcional: força o redirect_uri (por trás de proxy/reverso o Host pode
     # vir errado). Vazio = derive do próprio request.
     google_redirect_uri: str = ""
+    # Web Push (lembretes de hábito). Gere o par com
+    # `python backend/scripts/generate_vapid_keys.py`. Sem as chaves, o push
+    # fica desligado: nada é enviado e o app só não oferece a inscrição.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    # Contato exigido pelos serviços de push: mailto: ou https://.
+    vapid_subject: str = "https://app.slothdule.guivi.tech"
+    # Agendador dos lembretes (laço dentro da API). Os testes desligam.
+    push_scheduler_enabled: bool = True
+
+    @property
+    def push_enabled(self) -> bool:
+        return bool(self.vapid_public_key and self.vapid_private_key)
 
     @property
     def max_upload_bytes(self) -> int:

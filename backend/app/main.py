@@ -1,11 +1,28 @@
+import asyncio
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from app import scheduler
 from app.config import settings
-from app.routers import attachments, auth, categories, clients, files, habits, projects, reminders, rewards, subtasks, tasks
+from app.routers import attachments, auth, categories, clients, files, habits, projects, push, reminders, rewards, subtasks, tasks
 
-app = FastAPI(title="Slothdule API", version="1.0.0")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Lembretes de hábito: só com push configurado (chaves VAPID).
+    task = asyncio.create_task(scheduler.reminder_loop()) if scheduler.should_run() else None
+    yield
+    if task is not None:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+app = FastAPI(title="Slothdule API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,6 +58,7 @@ app.include_router(reminders.item_router)
 app.include_router(attachments.router)
 app.include_router(attachments.item_router)
 app.include_router(habits.router)
+app.include_router(push.router)
 app.include_router(rewards.router)
 app.include_router(rewards.leaves_router)
 app.include_router(files.upload_router)

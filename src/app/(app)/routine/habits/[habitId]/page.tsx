@@ -207,6 +207,12 @@ export default async function HabitPage({ params, searchParams }: HabitPageProps
                             <span className="rounded-full bg-sloth-beige px-2.5 py-1 text-[13px] text-sloth-ink">
                                 {formatWhen(habit)}
                             </span>
+                            {habit.remind ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-sloth-beige px-2.5 py-1 text-[13px] text-sloth-ink">
+                                    <svg aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
+                                    Lembrete no horário
+                                </span>
+                            ) : null}
                             <span className="inline-flex items-center gap-1 rounded-full bg-sloth-leaf/18 px-2.5 py-1 text-[13px] font-semibold text-sloth-forest">
                                 <span className="text-sloth-leaf">
                                     <LeafGlyph />

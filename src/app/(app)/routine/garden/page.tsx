@@ -72,7 +72,13 @@ function GardenCard({ habit }: { habit: Habit }) {
                         Evitar
                     </span>
                 ) : null}
-                <span className="rounded-full bg-sloth-beige px-2.5 py-0.5 text-xs text-sloth-ink">
+                <span className="inline-flex items-center gap-1 rounded-full bg-sloth-beige px-2.5 py-0.5 text-xs text-sloth-ink">
+                    {habit.remind ? (
+                        <>
+                            <svg aria-hidden="true" className="size-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15Z" /><path d="M10 20a2 2 0 0 0 4 0" /></svg>
+                            <span className="sr-only">Lembrete às </span>
+                        </>
+                    ) : null}
                     {formatWhen(habit)}
                 </span>
                 <span className="rounded-full bg-sloth-beige px-2.5 py-0.5 text-xs text-sloth-ink">

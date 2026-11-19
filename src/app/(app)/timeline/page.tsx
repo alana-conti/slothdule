@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { listHabits } from "@/features/habits/data";
 import { listTasks, listCategories, listClients, listProjects } from "@/features/tasks/data";
 import { TimelineView } from "@/components/timeline/timeline-view";
 import { getCurrentUser } from "@/lib/api/server";
@@ -11,12 +12,17 @@ export default async function TimelinePage() {
     redirect("/login");
   }
 
-  const [tasks, categories, clients, projects] = await Promise.all([
+  const [tasks, categories, clients, projects, habits] = await Promise.all([
     listTasks(),
     listCategories(),
     listClients(),
     listProjects(),
+    // A Rotina é um extra aqui: se a API de hábitos falhar, a linha do tempo segue.
+    listHabits().catch(() => []),
   ]);
+  const timedHabits = habits
+    .filter((habit) => habit.timeOfDay)
+    .sort((a, b) => (a.timeOfDay ?? "").localeCompare(b.timeOfDay ?? ""));
 
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">
@@ -36,6 +42,7 @@ export default async function TimelinePage() {
         </header>
 
         <TimelineView
+          habits={timedHabits}
           tasks={tasks}
           categories={categories}
           clients={clients}

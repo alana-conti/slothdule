@@ -27,6 +27,8 @@ export type Habit = {
     weekdays: number[];
     timeOfDay: string | null;
     period: HabitPeriod | null;
+    /** Lembrete por push no horário (só com `timeOfDay`). */
+    remind: boolean;
     startDate: string;
     createdAt: string;
     stage: HabitStage;
@@ -70,4 +72,5 @@ export type HabitInput = {
     weekdays: number[];
     timeOfDay: string | null;
     period: HabitPeriod | null;
+    remind: boolean;
 };

@@ -104,6 +104,7 @@ def _habit_out(
         "weekdays": sorted(habit.weekdays),
         "time_of_day": habit.time_of_day,
         "period": habit.period,
+        "remind": habit.remind,
         "start_date": habit.start_date,
         "created_at": habit.created_at,
         "stage": rules.STAGES[state.stage],
@@ -170,6 +171,7 @@ def create_habit(
         weekdays=payload.weekdays,
         time_of_day=payload.time_of_day,
         period=payload.period,
+        remind=payload.remind,
         start_date=today,
     )
     db.add(habit)
@@ -245,6 +247,7 @@ def update_habit(
     habit.weekdays = payload.weekdays
     habit.time_of_day = payload.time_of_day
     habit.period = payload.period
+    habit.remind = payload.remind
     db.commit()
     db.refresh(habit)
     checkins = _checkins_by_habit(db, user.id, [habit.id])[habit.id]

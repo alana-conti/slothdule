@@ -542,6 +542,8 @@ class Habit(Base):
     period: Mapped[HabitPeriod | None] = mapped_column(
         SAEnum(HabitPeriod, name="habit_period"), nullable=True
     )
+    # Lembrete por push no horário (só vale com `time_of_day`).
+    remind: Mapped[bool] = mapped_column(Boolean, server_default=text("false"), nullable=False)
     # Primeiro dia da agenda: faltas só contam a partir dele.
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -558,6 +560,9 @@ class Habit(Base):
         ),
         CheckConstraint(
             "time_of_day IS NULL OR period IS NULL", name="habits_time_or_period_check"
+        ),
+        CheckConstraint(
+            "NOT remind OR time_of_day IS NOT NULL", name="habits_remind_needs_time_check"
         ),
         Index("habits_user_idx", "user_id"),
     )
@@ -591,4 +596,42 @@ class HabitCheckin(Base):
     __table_args__ = (
         UniqueConstraint("habit_id", "day", name="habit_checkins_habit_day_unique"),
         Index("habit_checkins_user_day_idx", "user_id", "day"),
+    )
+
+
+class PushSubscription(Base):
+    """Inscrição de Web Push de um aparelho (uma por endpoint)."""
+
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    endpoint: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    p256dh: Mapped[str] = mapped_column(Text, nullable=False)
+    auth: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), nullable=False
+    )
+
+    __table_args__ = (Index("push_subscriptions_user_idx", "user_id"),)
+
+
+class HabitReminderDelivery(Base):
+    """Marca o lembrete do hábito no dia como enviado: no máximo um por dia."""
+
+    __tablename__ = "habit_reminder_deliveries"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    habit_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("habits.id", ondelete="CASCADE"), nullable=False
+    )
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=_now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("habit_id", "day", name="habit_reminder_deliveries_habit_day_unique"),
     )

@@ -115,4 +115,28 @@ test.describe("rotina e hábitos", () => {
       card.getByRole("button", { name: `Desmarcar “${title}”` }),
     ).toHaveAttribute("aria-pressed", "true");
   });
+
+  test("hábito com horário e lembrete aparece na Linha do tempo", async ({ page }) => {
+    const title = `${E2E_TITLE_PREFIX} Tomar vitamina ${Date.now()}`;
+
+    await page.goto("/routine");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "Novo hábito" }).click();
+    const dialog = page.getByRole("dialog", { name: "Plantar um hábito" });
+    await dialog.getByLabel("Que hábito você quer cultivar?").fill(title);
+    await dialog.getByText("Horário", { exact: true }).click();
+    await dialog.getByLabel("Que horas?").fill("07:30");
+    await dialog.getByRole("checkbox", { name: /Lembrar no horário/ }).check();
+    await dialog.getByRole("button", { name: "Plantar hábito" }).click();
+    await expect(dialog).toBeHidden();
+
+    await page.goto("/timeline");
+    const routine = page.getByRole("group", { name: "Rotina com horário" });
+    await expect(routine.getByRole("link", { name: `07:30 ${title}` })).toBeVisible();
+
+    await routine.getByRole("link", { name: `07:30 ${title}` }).click();
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    await expect(page.getByText("Lembrete no horário")).toBeVisible();
+  });
 });
+

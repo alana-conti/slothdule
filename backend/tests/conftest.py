@@ -22,11 +22,18 @@ from sqlalchemy.orm import sessionmaker
 
 os.environ.setdefault("JWT_SECRET", "test-secret")
 os.environ.setdefault("DATA_DIR", "/tmp/slothdule-test-data")
+# O laço de lembretes nunca roda nos testes; o envio é testado chamando o
+# serviço direto, com um "sender" falso.
+os.environ["PUSH_SCHEDULER_ENABLED"] = "false"
 # Hermeticidade: testes de OAuth Google assumem client não configurado por
 # padrão (o .env do cwd pode ter credenciais reais). O google_env fixture
 # sobrescreve os settings quando precisa.
 os.environ["GOOGLE_CLIENT_ID"] = ""
 os.environ["GOOGLE_CLIENT_SECRET"] = ""
+# Idem para o Web Push: sem chaves VAPID por padrão; o fixture `push_on`
+# dos testes de push liga quando precisa.
+os.environ["VAPID_PUBLIC_KEY"] = ""
+os.environ["VAPID_PRIVATE_KEY"] = ""
 
 from app.db import Base  # noqa: E402
 import app.models  # noqa: F401,E402

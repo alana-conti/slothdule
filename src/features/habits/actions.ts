@@ -69,7 +69,10 @@ function parseHabitForm(formData: FormData): HabitInput {
         period = value as HabitPeriod;
     }
 
-    return { kind: kind as HabitKind, period, timeOfDay, title, weekdays };
+    // Lembrete só faz sentido com horário específico.
+    const remind = timeOfDay !== null && formData.get("remind") === "on";
+
+    return { kind: kind as HabitKind, period, remind, timeOfDay, title, weekdays };
 }
 
 export type CreateHabitActionResult =

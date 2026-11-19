@@ -288,6 +288,7 @@ class HabitIn(BaseModel):
     weekdays: list[int] = Field(min_length=1, max_length=7)
     time_of_day: time | None = None
     period: HabitPeriod | None = None
+    remind: bool = False
 
     @field_validator("title")
     @classmethod
@@ -308,6 +309,8 @@ class HabitIn(BaseModel):
     def _time_or_period(self):
         if self.time_of_day is not None and self.period is not None:
             raise ValueError("Escolha um horário ou um período, não os dois.")
+        if self.remind and self.time_of_day is None:
+            raise ValueError("O lembrete precisa de um horário.")
         return self
 
 
@@ -318,6 +321,7 @@ class HabitOut(BaseModel):
     weekdays: list[int]
     time_of_day: time | None = None
     period: HabitPeriod | None = None
+    remind: bool
     start_date: date
     created_at: datetime
     stage: str
@@ -369,3 +373,22 @@ class HabitCheckinResultOut(BaseModel):
     leaves_awarded: int
     leaves_today: int
     leaves_cap: int
+
+
+# --- Web Push ---
+class PushPublicKeyOut(BaseModel):
+    public_key: str | None = None
+
+
+class PushKeysIn(BaseModel):
+    p256dh: str = Field(min_length=1, max_length=512)
+    auth: str = Field(min_length=1, max_length=512)
+
+
+class PushSubscriptionIn(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=2048, pattern=r"^https://")
+    keys: PushKeysIn
+
+
+class PushSubscriptionRemoveIn(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=2048)

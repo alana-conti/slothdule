@@ -49,15 +49,21 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  // Lembretes de hábito levam à Rotina; o resto, à tela Hoje.
+  const target = new URL(
+    (event.notification.data && event.notification.data.url) || "/today",
+    self.location.origin,
+  ).href;
+
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url === "/" && "focus" in client) {
-          return client.focus();
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+          return client.navigate(target).then((page) => (page || client).focus());
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow("/today");
+        return self.clients.openWindow(target);
       }
     })
   );

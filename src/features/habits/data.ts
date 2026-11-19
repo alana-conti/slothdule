@@ -21,6 +21,7 @@ type HabitRow = {
     weekdays: number[];
     time_of_day: string | null;
     period: HabitPeriod | null;
+    remind: boolean;
     start_date: string;
     created_at: string;
     stage: HabitStage;
@@ -89,6 +90,7 @@ function mapHabit(row: HabitRow): Habit {
         nextThreshold: row.next_threshold,
         period: row.period,
         regressionAfter: row.regression_after,
+        remind: row.remind,
         scheduledToday: row.scheduled_today,
         stage: row.stage,
         startDate: row.start_date,
@@ -105,6 +107,7 @@ function toPayload(input: HabitInput) {
     return {
         kind: input.kind,
         period: input.period,
+        remind: input.remind,
         time_of_day: input.timeOfDay,
         title: input.title,
         weekdays: input.weekdays,

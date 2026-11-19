@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, type FormEvent } from "react";
 
+import { ReminderField } from "@/features/habits/reminder-field";
 import { formatWeekdays, getStageThresholds, periodLabels } from "@/lib/habits";
 import { habitPeriods, type HabitKind, type HabitPeriod } from "@/types/habits";
 
@@ -167,10 +168,13 @@ export function NewHabitForm({ inFormation, onSubmit, pending }: NewHabitFormPro
                 </div>
 
                 {when === "time" ? (
-                    <label className="mt-3 block text-sm text-sloth-ink">
-                        Horário
-                        <input className={`${inputClass} max-w-40`} name="timeOfDay" required type="time" />
-                    </label>
+                    <>
+                        <label className="mt-3 block text-sm text-sloth-ink">
+                            Que horas?
+                            <input className={`${inputClass} block max-w-40`} name="timeOfDay" required type="time" />
+                        </label>
+                        <ReminderField />
+                    </>
                 ) : null}
 
                 {when === "period" ? (
