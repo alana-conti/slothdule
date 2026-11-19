@@ -13,7 +13,7 @@ from app.routers import attachments, auth, categories, clients, files, habits, p
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    # Lembretes de hábito: só com push configurado (chaves VAPID).
+    # Lembretes (hábitos e tarefas): só com push configurado (chaves VAPID).
     task = asyncio.create_task(scheduler.reminder_loop()) if scheduler.should_run() else None
     yield
     if task is not None:

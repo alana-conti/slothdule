@@ -66,6 +66,9 @@ def update_reminder(
     user: models.User = Depends(get_current_user),
 ):
     row = _owned_reminder(db, user.id, reminder_id)
+    # Remarcado para outro horário: volta a ser enviado no novo horário.
+    if payload.remind_at != row.remind_at:
+        row.is_sent = False
     row.title = (payload.title or "Lembrete de tarefa").strip()
     row.remind_at = payload.remind_at
     row.channel = payload.channel

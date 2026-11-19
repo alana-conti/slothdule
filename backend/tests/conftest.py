@@ -35,6 +35,7 @@ os.environ["GOOGLE_CLIENT_SECRET"] = ""
 os.environ["VAPID_PUBLIC_KEY"] = ""
 os.environ["VAPID_PRIVATE_KEY"] = ""
 
+from app.config import settings  # noqa: E402
 from app.db import Base  # noqa: E402
 import app.models  # noqa: F401,E402
 from app.db import get_session  # noqa: E402
@@ -133,3 +134,10 @@ def second_user_client(client):
     with TestClient(app) as c:
         _signup_and_login(c, "other")
         yield c
+
+
+@pytest.fixture()
+def push_on(monkeypatch):
+    """Liga o Web Push (chaves VAPID de mentira) só para o teste."""
+    monkeypatch.setattr(settings, "vapid_public_key", "chave-publica-de-teste")
+    monkeypatch.setattr(settings, "vapid_private_key", "chave-privada-de-teste")

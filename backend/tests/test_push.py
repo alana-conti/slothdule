@@ -1,17 +1,8 @@
-"""Inscrições de Web Push: /push (lembretes de hábito)."""
+"""Inscrições de Web Push: /push (lembretes de hábito e de tarefa)."""
 
 import uuid
 
-import pytest
-
 from app import models
-from app.config import settings
-
-
-@pytest.fixture()
-def push_on(monkeypatch):
-    monkeypatch.setattr(settings, "vapid_public_key", "chave-publica-de-teste")
-    monkeypatch.setattr(settings, "vapid_private_key", "chave-privada-de-teste")
 
 
 def subscription(endpoint: str | None = None) -> dict:

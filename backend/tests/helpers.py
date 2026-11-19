@@ -4,8 +4,11 @@ Centraliza a criação de entidades via HTTP para não duplicar helpers entre
 os arquivos `test_*.py`. Todos afirmam o status esperado e devolvem o JSON.
 """
 
+import json
 import uuid
 from datetime import date, timedelta
+
+from app.services.push import SubscriptionGone
 
 TASK_FIELDS = (
     "category_id",
@@ -127,3 +130,33 @@ def habits_today(client) -> dict:
     r = client.get("/habits/today")
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def subscribe_push(client) -> str:
+    """Inscreve um aparelho (endpoint único) para receber push. Devolve o endpoint."""
+    endpoint = f"https://push.example.com/{uuid.uuid4().hex}"
+    r = client.post(
+        "/push/subscriptions",
+        json={"endpoint": endpoint, "keys": {"p256dh": "p", "auth": "a"}},
+    )
+    assert r.status_code == 204, r.text
+    return endpoint
+
+
+class FakeSender:
+    """Sender de push falso: registra para qual aparelho iria cada mensagem.
+
+    Endpoints em `gone` simulam inscrições expiradas (404/410 do serviço).
+    """
+
+    def __init__(self, gone: set[str] | None = None):
+        self.sent: list[tuple[str, dict]] = []
+        self.gone = gone or set()
+
+    def __call__(self, subscription, payload):
+        if subscription.endpoint in self.gone:
+            raise SubscriptionGone()
+        self.sent.append((subscription.endpoint, json.loads(payload)))
+
+    def to(self, endpoint):
+        return [message for target, message in self.sent if target == endpoint]
