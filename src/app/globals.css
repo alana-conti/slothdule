@@ -63,29 +63,48 @@
   }
 }
 
-* {
-  box-sizing: border-box;
+/*
+ * Estilos base em @layer base: assim as classes do Tailwind (text-sm,
+ * font-semibold...) valem nos botões e campos. Fora de camada, o
+ * `font: inherit` abaixo vencia qualquer utilitário.
+ */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background: var(--color-sloth-cream);
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-sloth-cream);
+    color: var(--color-sloth-ink);
+    font-family: var(--font-sans);
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  ::selection {
+    background: var(--color-sloth-beige);
+    color: var(--color-sloth-forest);
+  }
 }
 
-html {
-  background: var(--color-sloth-cream);
-}
-
-body {
-  margin: 0;
-  background: var(--color-sloth-cream);
-  color: var(--color-sloth-ink);
-  font-family: var(--font-sans);
-}
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-::selection {
-  background: var(--color-sloth-beige);
-  color: var(--color-sloth-forest);
+/*
+ * Em telas de toque, campos com menos de 16px fazem o iPhone dar zoom ao
+ * focar. Esta regra fica fora de camada de propósito, para vencer o text-sm.
+ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
 }
