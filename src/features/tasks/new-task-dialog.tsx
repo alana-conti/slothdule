@@ -42,6 +42,8 @@ export function NewTaskDialog() {
     // recebe hover/foco) e ficam em cache enquanto a página não for recarregada.
     const [categories, setCategories] = useState<Category[] | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
+    // O formulário detalhado começa recolhido; abre ao clicar no texto.
+    const [detailedOpen, setDetailedOpen] = useState(false);
     const loadingRef = useRef(false);
     const { toast } = useToast();
     const [error, setError] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export function NewTaskDialog() {
         }
 
         setSession((current) => current + 1);
+        setDetailedOpen(false);
         setError(null);
         dialog.showModal();
         loadCategories();
@@ -234,16 +237,31 @@ export function NewTaskDialog() {
                                 />
                                 <div className="relative flex items-center py-4">
                                     <div className="flex-grow border-t border-sloth-border/40"></div>
-                                    <span className="mx-4 flex-shrink bg-sloth-card px-2 text-xs font-medium text-sloth-muted">
+                                    <button
+                                        aria-controls="new-task-detailed-form"
+                                        aria-expanded={detailedOpen}
+                                        className="mx-4 flex-shrink cursor-pointer rounded-lg bg-sloth-card px-2 py-1 text-xs font-medium text-sloth-muted transition hover:text-sloth-forest"
+                                        onClick={() =>
+                                            setDetailedOpen((open) => !open)
+                                        }
+                                        type="button"
+                                    >
                                         ou use o formulário detalhado
-                                    </span>
+                                        <span aria-hidden="true">
+                                            {detailedOpen ? " ▴" : " ▾"}
+                                        </span>
+                                    </button>
                                     <div className="flex-grow border-t border-sloth-border/40"></div>
                                 </div>
-                                <TaskForm
-                                    categories={categories}
-                                    onSubmit={handleSubmit}
-                                    submitLabel="Criar tarefa"
-                                />
+                                <div hidden={!detailedOpen} id="new-task-detailed-form">
+                                    {detailedOpen ? (
+                                        <TaskForm
+                                            categories={categories}
+                                            onSubmit={handleSubmit}
+                                            submitLabel="Criar tarefa"
+                                        />
+                                    ) : null}
+                                </div>
                             </>
                         )}
                     </div>

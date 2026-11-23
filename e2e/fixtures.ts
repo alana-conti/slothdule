@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 // Credenciais do usuário de teste criado/reutilizado pelo setup.
 export const E2E_EMAIL = "e2e@slothdule.dev";
@@ -31,6 +31,13 @@ export function todayKey(offsetDays = 0) {
   return `${values.get("year")}-${values.get("month")}-${values.get("day")}`;
 }
 
+/** O formulário detalhado começa recolhido: abre pelo texto do divisor. */
+export async function openDetailedForm(dialog: Locator) {
+  await dialog
+    .getByRole("button", { name: /formulário detalhado/ })
+    .click();
+}
+
 export function taskCard(page: Page, title: string) {
   return page
     .locator("article")
@@ -51,6 +58,7 @@ export async function createTaskByForm(
 
   await page.getByRole("button", { name: "Nova tarefa" }).click();
   const section = page.getByRole("dialog", { name: "O que precisa sair da cabeça?" });
+  await openDetailedForm(section);
   await section.getByLabel("Título").fill(options.title);
   await section
     .getByLabel("Categoria")

@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { E2E_CATEGORY_NAME, todayKey, uniqueTitle } from "./fixtures";
+import {
+  E2E_CATEGORY_NAME,
+  openDetailedForm,
+  todayKey,
+  uniqueTitle,
+} from "./fixtures";
 
 test.describe("pop-up de nova tarefa", () => {
   test.beforeEach(async ({ page }) => {
@@ -21,6 +26,24 @@ test.describe("pop-up de nova tarefa", () => {
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
+  });
+
+  test("o formulário detalhado começa recolhido e abre ao clicar no texto", async ({
+    page,
+  }) => {
+    await page.keyboard.press("n");
+    const dialog = page.getByRole("dialog");
+    const toggle = dialog.getByRole("button", { name: /formulário detalhado/ });
+
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(dialog.getByLabel("Título")).toBeHidden();
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(dialog.getByLabel("Título")).toBeVisible();
+
+    await toggle.click();
+    await expect(dialog.getByLabel("Título")).toBeHidden();
   });
 
   test("abre pelo botão fixo e fecha no botão Fechar", async ({ page }) => {
@@ -74,6 +97,7 @@ test.describe("pop-up de nova tarefa", () => {
 
     await page.getByRole("button", { name: "Nova tarefa" }).click();
     const dialog = page.getByRole("dialog");
+    await openDetailedForm(dialog);
     await dialog.getByLabel("Título").fill(title);
     await dialog
       .getByLabel("Categoria")
@@ -101,6 +125,7 @@ test.describe("pop-up de nova tarefa", () => {
 
     await page.getByRole("button", { name: "Nova tarefa" }).click();
     const dialog = page.getByRole("dialog");
+    await openDetailedForm(dialog);
     await dialog.getByLabel("Título").fill(uniqueTitle("Toast fecha"));
     await dialog
       .getByLabel("Categoria")
@@ -133,6 +158,7 @@ test.describe("pop-up de nova tarefa", () => {
 
     await page.getByRole("button", { name: "Nova tarefa" }).click();
     const dialog = page.getByRole("dialog");
+    await openDetailedForm(dialog);
     await dialog
       .locator("#category-new")
       .selectOption({ label: E2E_CATEGORY_NAME });
@@ -161,7 +187,8 @@ test.describe("pop-up de nova tarefa", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
 
-    // O formulário já aparece e dá pra digitar; só a categoria espera.
+    // O formulário abre ao clicar e dá pra digitar; só a categoria espera.
+    await openDetailedForm(dialog);
     await dialog.getByLabel("Título").fill("Digitando antes de carregar");
     await expect(dialog.locator("#category-new")).toBeDisabled();
     await expect(
