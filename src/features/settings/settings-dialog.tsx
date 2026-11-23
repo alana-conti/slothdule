@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import type { FormEvent, KeyboardEvent, ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 import { logout } from "@/app/login/actions";
+import {
+    disablePush,
+    enablePush,
+    getPushState,
+    pushResultMessages,
+    sendTestNotification,
+} from "@/features/notifications/push-client";
+import type { PushState } from "@/features/notifications/push-client";
 
 import { completionSounds } from "@/lib/audio/sound-settings";
 import type { CompletionSound, SoundName } from "@/lib/audio/sound-settings";
@@ -19,7 +27,7 @@ import {
 } from "./profile";
 import type { SettingsUser } from "./profile";
 
-export type SettingsTab = "perfil" | "sons";
+export type SettingsTab = "perfil" | "notificacoes" | "sons";
 
 type SettingsDialogProps = {
     user: SettingsUser;
@@ -53,6 +61,16 @@ const tabs: Array<{ icon: ReactNode; id: SettingsTab; label: string }> = [
         ),
         id: "perfil",
         label: "Perfil",
+    },
+    {
+        icon: (
+            <Icon>
+                <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z" />
+                <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
+            </Icon>
+        ),
+        id: "notificacoes",
+        label: "Notificações",
     },
     {
         icon: (
@@ -187,7 +205,9 @@ export function SettingsDialog({ user, onClose }: SettingsDialogProps) {
                         </Icon>
                     </button>
 
-                    {tab === "perfil" ? <ProfilePanel user={user} /> : <SoundsPanel />}
+                    {tab === "perfil" ? <ProfilePanel user={user} /> : null}
+                    {tab === "notificacoes" ? <NotificationsPanel /> : null}
+                    {tab === "sons" ? <SoundsPanel /> : null}
                 </div>
             </div>
         </dialog>
@@ -394,6 +414,126 @@ function PreviewButton({ label, sound }: { label: string; sound: SoundName }) {
                 <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" />
             </svg>
         </button>
+    );
+}
+
+const noopSubscribe = () => () => {};
+
+function NotificationsPanel() {
+    const baseId = useId();
+    // Lido do navegador só no cliente; no servidor vale "default".
+    const initialState = useSyncExternalStore<PushState>(
+        noopSubscribe,
+        getPushState,
+        () => "default",
+    );
+    const [pushState, setPushState] = useState<PushState | null>(null);
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const state = pushState ?? initialState;
+    const enabled = state === "granted";
+    const unavailable = state === "unsupported" || state === "denied";
+
+    async function toggle() {
+        if (busy || unavailable) {
+            return;
+        }
+
+        setBusy(true);
+        setMessage(null);
+
+        if (enabled) {
+            await disablePush();
+            setMessage("Notificações desligadas neste aparelho.");
+        } else {
+            const result = await enablePush();
+
+            setMessage(
+                result === "enabled"
+                    ? "Pronto. Este aparelho vai receber os lembretes. 🍃"
+                    : pushResultMessages[result],
+            );
+        }
+
+        setPushState(getPushState());
+        setBusy(false);
+    }
+
+    async function test() {
+        const sent = await sendTestNotification();
+
+        setMessage(
+            sent
+                ? "Teste enviado. Deve aparecer em instantes."
+                : "Não deu para mostrar o teste agora. Tente de novo daqui a pouco.",
+        );
+    }
+
+    return (
+        <div>
+            <PanelHeader
+                description="Lembretes gentis de tarefas e hábitos, no seu ritmo."
+                title="Notificações"
+            />
+
+            <div className="mt-6 flex items-center gap-4 rounded-2xl border border-sloth-border bg-sloth-cream px-4 py-3">
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold" id={`${baseId}-enabled`}>
+                        Receber notificações
+                    </p>
+                    <p className="text-xs text-sloth-muted">
+                        {state === "denied"
+                            ? pushResultMessages.denied
+                            : state === "unsupported"
+                              ? pushResultMessages.unsupported
+                              : "Vale só para este aparelho."}
+                    </p>
+                </div>
+                <button
+                    aria-checked={enabled}
+                    aria-labelledby={`${baseId}-enabled`}
+                    className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest disabled:cursor-not-allowed disabled:opacity-50 ${
+                        enabled ? "bg-sloth-moss" : "bg-sloth-border"
+                    } ${busy ? "cursor-wait" : ""}`}
+                    disabled={unavailable}
+                    onClick={toggle}
+                    role="switch"
+                    type="button"
+                >
+                    <span
+                        aria-hidden="true"
+                        className={`absolute top-1 left-1 size-4 rounded-full bg-white transition-transform ${
+                            enabled ? "translate-x-5" : ""
+                        }`}
+                    />
+                </button>
+            </div>
+
+            <div
+                className={`mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-sloth-border px-4 py-3 transition-opacity ${
+                    enabled ? "" : "opacity-50"
+                }`}
+            >
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">Testar notificação</p>
+                    <p className="text-xs text-sloth-muted">
+                        Um aviso de exemplo, para ver como chega por aqui.
+                    </p>
+                </div>
+                <button
+                    className="min-h-10 cursor-pointer rounded-xl border border-sloth-border bg-sloth-card px-4 text-sm font-semibold text-sloth-forest transition hover:bg-sloth-beige focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest disabled:cursor-not-allowed"
+                    disabled={!enabled}
+                    onClick={test}
+                    type="button"
+                >
+                    Enviar teste
+                </button>
+            </div>
+
+            <p aria-live="polite" className="mt-4 min-h-5 text-xs font-medium text-sloth-forest">
+                {message}
+            </p>
+        </div>
     );
 }
 

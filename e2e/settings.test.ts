@@ -67,6 +67,26 @@ test.describe("configurações", () => {
   });
 });
 
+test.describe("notificações", () => {
+  test("ficam nas configurações, não na tela Hoje", async ({ page }) => {
+    await page.goto("/today");
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("button", { name: "Enviar teste" })).toHaveCount(0);
+
+    await page
+      .getByRole("complementary")
+      .getByRole("button", { name: "Abrir configurações" })
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Configurações" });
+    await dialog.getByRole("tab", { name: "Notificações" }).click();
+
+    // O navegador de teste não concede a permissão: desligado, sem teste.
+    const toggle = dialog.getByRole("switch", { name: "Receber notificações" });
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await expect(dialog.getByRole("button", { name: "Enviar teste" })).toBeDisabled();
+  });
+});
+
 test.describe("configurações no celular", () => {
   test.use({ viewport: { width: 390, height: 800 } });
 

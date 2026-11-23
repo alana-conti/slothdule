@@ -16,7 +16,6 @@ import { calculatePriorityScore } from "@/lib/priority";
 import { getCurrentUser } from "@/lib/api/server";
 import type { Category, Task } from "@/types/tasks";
 
-import { PwaNotificationManager } from "@/components/sloth/pwa-notification-manager";
 
 type TodayPageProps = {
   searchParams: Promise<{
@@ -371,10 +370,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             {error}
           </p>
         ) : null}
-
-        <div className="mt-6">
-          <PwaNotificationManager />
-        </div>
 
         <section
           aria-label="Resumo do dia"
