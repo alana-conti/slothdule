@@ -10,6 +10,7 @@
 # Secrets necessários (Settings → Secrets → Actions):
 #   PUBLIC_API_URL  (ex.: https://api.seudominio.com — embutida no build do front)
 #   SSH_HOST / SSH_USER / SSH_KEY (acesso à VPS)
+#   SSH_PORT        (porta do SSH na VPS; sem ele, usa 22)
 #   DEPLOY_DIR      (ex.: /opt/slothdule — repo já clonado na VPS, branch main)
 name: Deploy
 
@@ -84,6 +85,7 @@ jobs:
       - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT || 22 }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           envs: DEPLOY_DIR,GHCR_USER,GHCR_TOKEN,API_IMAGE,WEB_IMAGE
