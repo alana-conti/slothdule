@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { FocusMobileDock, FocusSidebarCard } from "@/features/focus/focus-dock";
+import { TimerIcon } from "@/features/focus/focus-panel";
+import { openFocusPanel } from "@/features/focus/focus-store";
 import { getUserInitial } from "@/features/settings/profile";
 import type { SettingsUser } from "@/features/settings/profile";
 import { SettingsDialog } from "@/features/settings/settings-dialog";
@@ -310,6 +313,8 @@ function DesktopSidebar({
                 ))}
             </nav>
 
+            <FocusSidebarCard />
+
             <div className="flex flex-col gap-2 border-t border-sloth-border/70 pt-4">
                 <LeafBalance balance={balance} />
                 <button
@@ -419,6 +424,20 @@ function MobileBar({
                         );
                     })}
                     <div className="mx-2 my-2 border-t border-sloth-border/70" />
+                    <button
+                        className={`${itemClass(false)} w-full cursor-pointer text-left`}
+                        onClick={() => {
+                            setOpenFor(null);
+                            openFocusPanel();
+                        }}
+                        type="button"
+                    >
+                        <span className="text-sloth-muted">
+                            <TimerIcon />
+                        </span>
+                        Modo foco
+                    </button>
+                    <div className="mx-2 my-2 border-t border-sloth-border/70" />
                     <Link
                         aria-current={isActive(rewards, pathname) ? "page" : undefined}
                         className={itemClass(isActive(rewards, pathname))}
@@ -449,6 +468,8 @@ function MobileBar({
                     </button>
                 </div>
             ) : null}
+
+            <FocusMobileDock />
 
             <div className="relative">
                 <nav

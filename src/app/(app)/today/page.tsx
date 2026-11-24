@@ -107,6 +107,7 @@ function FocusArea({
         {tasks.map((task) => (
           <TaskRow
             categories={categories}
+            focusable
             // Em foco pode vir de qualquer data: o atraso continua visível.
             isOverdue={task.dueDate < todayDate}
             key={task.id}

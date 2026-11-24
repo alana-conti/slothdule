@@ -13,6 +13,8 @@ import type { FormEvent, KeyboardEvent, MouseEvent } from "react";
 
 import { useToast } from "@/components/sloth/toast";
 import { ChipSelect } from "@/components/ui/chip-select";
+import { clearFocusTask, getFocusState } from "@/features/focus/focus-store";
+import { FocusTaskButton } from "@/features/focus/focus-task-button";
 import {
     archiveTaskAction,
     changeTaskStatusAction,
@@ -41,6 +43,8 @@ import type { Category, Task, TaskStatus } from "@/types/tasks";
 
 type TaskRowProps = {
     categories: Category[];
+    /** Mostra o botão "Focar" (Modo foco) enquanto a tarefa está em andamento. */
+    focusable?: boolean;
     isOverdue?: boolean;
     priority: PriorityScoreResult;
     task: Task;
@@ -107,6 +111,7 @@ const actionButtonClasses =
 
 export function TaskRow({
     categories,
+    focusable = false,
     isOverdue = false,
     priority,
     task,
@@ -221,6 +226,11 @@ export function TaskRow({
             };
 
             if (next === "done") {
+                // Tarefa feita sai do Modo foco; o relógio segue, como foco livre.
+                if (getFocusState().session?.task?.id === task.id) {
+                    clearFocusTask();
+                }
+
                 if (result.dayComplete) {
                     playDayCompleteSound();
                 }
@@ -583,6 +593,10 @@ export function TaskRow({
                         </p>
                     ) : null}
                 </div>
+
+                {focusable && status === "in_progress" ? (
+                    <FocusTaskButton task={{ id: task.id, title: fields.title }} />
+                ) : null}
 
                 {status === "in_progress" ? (
                     <button

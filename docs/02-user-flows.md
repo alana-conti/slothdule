@@ -327,3 +327,27 @@ Status: Solicitada
 - Final de semana especial.
 - Viagem.
 
+
+## 12. Fluxo: Modo foco (pomodoro)
+
+```text
+Usuário inicia uma tarefa (▶) e ela vai para "Em foco agora"
+↓
+Clica em "Focar" na linha da tarefa
+↓
+Começa um bloco de foco no último ritmo escolhido, ligado àquela tarefa
+↓
+O relógio fica à vista em qualquer tela (menu lateral no desktop, pílula no celular)
+↓
+Ao fim do foco: som suave, mensagem calma, e a pausa começa sozinha
+↓
+Ao fim da pausa: o próximo foco fica pronto, esperando a pessoa voltar
+```
+
+- **Onde fica:** no desktop, um cartão "Modo foco" no menu lateral (recolhido quando não há sessão). No celular, uma pílula acima da barra de navegação enquanto há sessão (relógio, fase, tarefa e pausar/retomar); tocar nela abre a folha com o painel inteiro. Sem sessão, o Modo foco abre pelo menu **Mais**.
+- **Ritmos:** Clássico (25/5, pausa longa de 15 a cada 4 focos), Profundo (50/10, pausa longa de 20 a cada 3) e Ritmo preguiça (15/5, para dias de pouca energia). O último ritmo escolhido vale para a próxima sessão.
+- **Sem punição:** pausar, pular ou encerrar não tira nada. Pular o foco não conta como concluído.
+- **Tarefa ligada:** "Focar" com uma sessão já aberta só troca a tarefa, sem reiniciar o relógio. Concluir a tarefa em foco a desliga, e o relógio segue como foco livre. Na linha da tarefa em foco, o botão vira o relógio.
+- **Relógio confiável:** a sessão guarda a hora de término, não conta segundos; fica no aparelho (localStorage), sobrevive a trocar de tela e a recarregar, e as abas abertas acompanham umas às outras. Quem volta depois de um tempo fora encontra a fase certa.
+- **Avisos:** com a aba à vista, som e toast. Com a aba em segundo plano e notificações permitidas, aviso do sistema. O título da aba mostra o relógio ("12:34 · Foco · Slothdule").
+- **Próximas fases:** som para trabalhar (lives de lofi e sons da floresta), histórico de foco com Folhinhas por ciclo e aviso por Web Push com a tela bloqueada.
