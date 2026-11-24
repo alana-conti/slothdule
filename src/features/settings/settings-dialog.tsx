@@ -14,12 +14,14 @@ import {
 } from "@/features/notifications/push-client";
 import type { PushState } from "@/features/notifications/push-client";
 
+import { FocusMixEditor } from "@/features/focus/sound/mix-editor";
 import { completionSounds } from "@/lib/audio/sound-settings";
 import type { CompletionSound, SoundName } from "@/lib/audio/sound-settings";
 import { updateSoundSettings, useSoundSettings } from "@/lib/audio/sound-store";
 import { playSound } from "@/lib/audio/sounds";
 
 import { updateProfileAction } from "./actions";
+import type { SettingsSection } from "./open-settings";
 import {
     DISPLAY_NAME_MAX_LENGTH,
     formatMemberSince,
@@ -32,6 +34,8 @@ export type SettingsTab = "perfil" | "notificacoes" | "sons";
 type SettingsDialogProps = {
     user: SettingsUser;
     onClose: () => void;
+    /** Abre já no ponto certo (o "Editar camadas" do Modo foco). */
+    section?: SettingsSection | null;
 };
 
 function Icon({ children }: { children: ReactNode }) {
@@ -94,11 +98,11 @@ const soundOptions: Record<CompletionSound, { description: string; label: string
  * Configurações da conta, em abas. Montada só quando aberta, como os outros
  * pop-ups do app; Esc, clique fora ou o X fecham.
  */
-export function SettingsDialog({ user, onClose }: SettingsDialogProps) {
+export function SettingsDialog({ user, onClose, section = null }: SettingsDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const tabRefs = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
     const baseId = useId();
-    const [tab, setTab] = useState<SettingsTab>("perfil");
+    const [tab, setTab] = useState<SettingsTab>(section === "mistura" ? "sons" : "perfil");
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -141,7 +145,7 @@ export function SettingsDialog({ user, onClose }: SettingsDialogProps) {
             ref={dialogRef}
         >
             {/* Altura fixa no desktop: trocar de aba não faz a modal pular. */}
-            <div className="flex flex-col sm:min-h-[37rem] sm:flex-row">
+            <div className="flex max-h-[calc(100dvh-2rem)] flex-col sm:min-h-[37rem] sm:flex-row">
                 <div className="border-b border-sloth-border bg-sloth-cream px-4 pt-5 pb-3 sm:w-48 sm:shrink-0 sm:border-r sm:border-b-0 sm:py-6">
                     <h2
                         className="px-3 pb-3 text-xs font-semibold tracking-[0.14em] text-sloth-moss uppercase"
@@ -190,7 +194,7 @@ export function SettingsDialog({ user, onClose }: SettingsDialogProps) {
 
                 <div
                     aria-labelledby={`${baseId}-${tab}-tab`}
-                    className="relative min-w-0 flex-1 p-6"
+                    className="relative min-h-0 min-w-0 flex-1 overflow-y-auto p-6"
                     id={`${baseId}-${tab}-panel`}
                     role="tabpanel"
                 >
@@ -207,7 +211,7 @@ export function SettingsDialog({ user, onClose }: SettingsDialogProps) {
 
                     {tab === "perfil" ? <ProfilePanel user={user} /> : null}
                     {tab === "notificacoes" ? <NotificationsPanel /> : null}
-                    {tab === "sons" ? <SoundsPanel /> : null}
+                    {tab === "sons" ? <SoundsPanel showMix={section === "mistura"} /> : null}
                 </div>
             </div>
         </dialog>
@@ -537,9 +541,16 @@ function NotificationsPanel() {
     );
 }
 
-function SoundsPanel() {
+function SoundsPanel({ showMix }: { showMix: boolean }) {
     const settings = useSoundSettings();
     const baseId = useId();
+    const mixRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (showMix) {
+            mixRef.current?.scrollIntoView({ block: "start" });
+        }
+    }, [showMix]);
 
     return (
         <div>
@@ -664,6 +675,10 @@ function SoundsPanel() {
                     <PreviewButton label="som de dia completo" sound="dia-completo" />
                 </div>
             </fieldset>
+
+            <div className="mt-8 scroll-mt-6 border-t border-sloth-border pt-6" ref={mixRef}>
+                <FocusMixEditor />
+            </div>
         </div>
     );
 }

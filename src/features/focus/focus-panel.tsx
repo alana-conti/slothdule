@@ -24,6 +24,11 @@ import {
     getRemainingMs,
 } from "./pomodoro";
 import type { FocusSession } from "./pomodoro";
+import { TONES } from "./focus-tones";
+import type { FocusTone, Tone } from "./focus-tones";
+import { SoundPicker } from "./sound/sound-picker";
+
+export type { FocusTone };
 
 export function TimerIcon({ className = "size-5" }: { className?: string }) {
     return (
@@ -43,61 +48,6 @@ export function TimerIcon({ className = "size-5" }: { className?: string }) {
     );
 }
 
-/**
- * - `light`: a folha do celular, no creme do app.
- * - `dark`: o cartão fixo do desktop, em verde-floresta, para se destacar da tela.
- */
-export type FocusTone = "light" | "dark";
-
-const buttonBase =
-    "inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl px-3 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2";
-
-const TONES = {
-    dark: {
-        breakBar: "bg-sloth-gold",
-        clock: "text-white",
-        dotDone: "bg-sloth-cream",
-        dotTodo: "bg-white/25",
-        eyebrow: "text-white/75",
-        focusBar: "bg-sloth-cream",
-        muted: "text-white/75",
-        primary: `${buttonBase} bg-sloth-cream font-semibold text-sloth-forest hover:bg-white focus-visible:outline-sloth-cream`,
-        radioOff: "border-white/40",
-        radioOn: "border-sloth-cream",
-        radioDot: "bg-sloth-cream",
-        rhythmOff: "border-white/15 text-white hover:bg-white/10",
-        rhythmOn: "border-white/50 bg-white/15 text-white",
-        rhythmOutline: "has-focus-visible:outline-sloth-cream",
-        secondary: `${buttonBase} border border-white/25 font-medium text-white hover:bg-white/10 focus-visible:outline-sloth-cream`,
-        strong: "text-white",
-        taskBox: "bg-white/10 text-white",
-        taskClear: "text-white/70 hover:bg-white/15 hover:text-white",
-        track: "bg-white/15",
-    },
-    light: {
-        breakBar: "bg-sloth-gold",
-        clock: "text-sloth-ink",
-        dotDone: "bg-sloth-moss",
-        dotTodo: "bg-sloth-border",
-        eyebrow: "text-sloth-moss",
-        focusBar: "bg-sloth-moss",
-        muted: "text-sloth-muted",
-        primary: `${buttonBase} bg-sloth-moss font-semibold text-white hover:bg-sloth-forest focus-visible:outline-sloth-forest`,
-        radioOff: "border-sloth-border",
-        radioOn: "border-sloth-moss",
-        radioDot: "bg-sloth-moss",
-        rhythmOff: "border-sloth-border bg-sloth-card text-sloth-ink hover:bg-sloth-beige",
-        rhythmOn: "border-sloth-moss/50 bg-sloth-moss/10 text-sloth-forest",
-        rhythmOutline: "has-focus-visible:outline-sloth-forest",
-        secondary: `${buttonBase} border border-sloth-border bg-sloth-card font-medium text-sloth-forest hover:bg-sloth-beige focus-visible:outline-sloth-forest`,
-        strong: "text-sloth-forest",
-        taskBox: "bg-sloth-beige/60 text-sloth-ink",
-        taskClear: "text-sloth-muted hover:bg-sloth-card hover:text-sloth-forest",
-        track: "bg-sloth-beige",
-    },
-} satisfies Record<FocusTone, Record<string, string>>;
-
-type Tone = (typeof TONES)[FocusTone];
 
 function RhythmPicker({ tone }: { tone: Tone }) {
     const { rhythm } = useFocusState();
@@ -291,14 +241,19 @@ function ActiveContent({ session, tone }: { session: FocusSession; tone: Tone })
     );
 }
 
-/** Conteúdo do Modo foco, igual no cartão do desktop e na folha do celular. */
+/** Conteúdo do Modo foco (relógio e som), igual no cartão do desktop e na folha do celular. */
 export function FocusPanelContent({ tone = "light" }: { tone?: FocusTone }) {
     const { session } = useFocusState();
     const classes = TONES[tone];
 
-    return session ? (
-        <ActiveContent session={session} tone={classes} />
-    ) : (
-        <IdleContent tone={classes} />
+    return (
+        <div className="grid gap-4">
+            {session ? (
+                <ActiveContent session={session} tone={classes} />
+            ) : (
+                <IdleContent tone={classes} />
+            )}
+            <SoundPicker tone={classes} />
+        </div>
     );
 }

@@ -8,6 +8,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FocusDesktopDock, FocusMobileDock } from "@/features/focus/focus-dock";
 import { TimerIcon } from "@/features/focus/focus-panel";
 import { openFocusPanel } from "@/features/focus/focus-store";
+import { OPEN_SETTINGS_EVENT } from "@/features/settings/open-settings";
+import type { SettingsSection } from "@/features/settings/open-settings";
 import { getUserInitial } from "@/features/settings/profile";
 import type { SettingsUser } from "@/features/settings/profile";
 import { SettingsDialog } from "@/features/settings/settings-dialog";
@@ -189,7 +191,22 @@ type NavigationPartProps = AppNavigationProps & {
 export function AppNavigation({ balance, user }: AppNavigationProps) {
     const pathname = usePathname();
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const openSettings = () => setSettingsOpen(true);
+    const [settingsSection, setSettingsSection] = useState<SettingsSection | null>(null);
+    const openSettings = () => {
+        setSettingsSection(null);
+        setSettingsOpen(true);
+    };
+
+    useEffect(() => {
+        function handleOpen(event: Event) {
+            setSettingsSection((event as CustomEvent<SettingsSection>).detail);
+            setSettingsOpen(true);
+        }
+
+        window.addEventListener(OPEN_SETTINGS_EVENT, handleOpen);
+
+        return () => window.removeEventListener(OPEN_SETTINGS_EVENT, handleOpen);
+    }, []);
 
     return (
         <>
@@ -207,7 +224,11 @@ export function AppNavigation({ balance, user }: AppNavigationProps) {
             />
             <FocusDesktopDock />
             {settingsOpen ? (
-                <SettingsDialog onClose={() => setSettingsOpen(false)} user={user} />
+                <SettingsDialog
+                    onClose={() => setSettingsOpen(false)}
+                    section={settingsSection}
+                    user={user}
+                />
             ) : null}
         </>
     );

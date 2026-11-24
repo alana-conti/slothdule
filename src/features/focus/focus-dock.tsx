@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { DESKTOP_QUERY, useMediaQuery } from "@/lib/use-media-query";
+
 import { FocusPanelContent, TimerIcon } from "./focus-panel";
 import type { FocusTone } from "./focus-panel";
 import {
@@ -15,6 +17,8 @@ import {
 } from "./focus-store";
 import { PHASE_LABELS, formatClock, getRemainingMs } from "./pomodoro";
 import type { FocusSession } from "./pomodoro";
+import { LofiCard, SoundChip } from "./sound/sound-dock";
+import { useSoundState } from "./sound/sound-store";
 
 /**
  * Abre e fecha o painel: pelos eventos (botão Focar, menu Mais, tecla F), por
@@ -90,7 +94,8 @@ function useFocusPanel(
 const PANEL_TONES: Record<FocusTone, { panel: string; title: string; close: string }> = {
     dark: {
         close: "text-white/70 hover:bg-white/15 hover:text-white",
-        panel: "w-80 border-sloth-forest bg-sloth-forest text-white",
+        // Cabe na tela com a live e a pílula embaixo; o conteúdo rola, o título fica.
+        panel: "w-80 min-h-0 border-sloth-forest bg-sloth-forest text-white",
         title: "text-white/75",
     },
     light: {
@@ -101,11 +106,13 @@ const PANEL_TONES: Record<FocusTone, { panel: string; title: string; close: stri
 };
 
 function FocusPanel({
+    className = "",
     id,
     onClose,
     panelRef,
     tone,
 }: {
+    className?: string;
     id: string;
     onClose: () => void;
     panelRef: React.RefObject<HTMLElement | null>;
@@ -116,12 +123,12 @@ function FocusPanel({
     return (
         <section
             aria-label="Modo foco"
-            className={`animate-menu-in mb-2 ml-auto rounded-2xl border p-4 shadow-soft outline-none ${classes.panel}`}
+            className={`animate-menu-in ml-auto flex flex-col rounded-2xl border py-4 shadow-soft outline-none ${classes.panel} ${className}`}
             id={id}
             ref={panelRef}
             tabIndex={-1}
         >
-            <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="mb-3 flex shrink-0 items-center justify-between gap-2 px-4">
                 <p
                     className={`flex items-center gap-2 text-xs font-semibold tracking-[0.14em] uppercase ${classes.title}`}
                 >
@@ -137,7 +144,9 @@ function FocusPanel({
                     ✕
                 </button>
             </div>
-            <FocusPanelContent tone={tone} />
+            <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pb-0.5">
+                <FocusPanelContent tone={tone} />
+            </div>
         </section>
     );
 }
@@ -193,7 +202,7 @@ function SessionPill({
 
     return (
         <div
-            className={`ml-auto flex w-fit max-w-full items-center gap-1 rounded-full border p-1 shadow-soft ${classes.frame}`}
+            className={`ml-auto flex w-fit min-w-0 max-w-full items-center gap-1 rounded-full border p-1 shadow-soft ${classes.frame}`}
         >
             <button
                 aria-controls={controls}
@@ -239,10 +248,12 @@ function SessionPill({
 /**
  * Modo foco no desktop: fixo no canto inferior direito, em verde-floresta, em
  * todas as telas. Sem sessão é um botão discreto; com sessão, a pílula com o
- * relógio. O painel abre por cima, sem sair da tela.
+ * relógio. Acima dela, a live de lofi quando toca, e o painel abre por cima de
+ * tudo, sem sair da tela.
  */
 export function FocusDesktopDock() {
     const { session } = useFocusState();
+    const isDesktop = useMediaQuery(DESKTOP_QUERY);
     const rootRef = useRef<HTMLDivElement>(null);
     const panelRef = useRef<HTMLElement>(null);
     const panel = useFocusPanel(rootRef, panelRef);
@@ -250,69 +261,93 @@ export function FocusDesktopDock() {
 
     return (
         <div
-            className="fixed right-6 bottom-6 z-40 hidden max-w-[calc(100vw-18rem)] flex-col items-end lg:flex"
+            className="fixed right-6 bottom-6 z-40 hidden max-h-[calc(100dvh-3rem)] max-w-[calc(100vw-18rem)] flex-col items-end gap-2 lg:flex"
             ref={rootRef}
         >
             {panel.open ? (
                 <FocusPanel id={panelId} onClose={panel.close} panelRef={panelRef} tone="dark" />
             ) : null}
-            {session ? (
-                <SessionPill
-                    controls={panelId}
-                    onOpen={panel.toggle}
-                    open={panel.open}
-                    session={session}
-                    tone="dark"
-                />
-            ) : (
-                <button
-                    aria-controls={panelId}
-                    aria-expanded={panel.open}
-                    aria-keyshortcuts="F"
-                    className="flex min-h-12 cursor-pointer items-center gap-2 rounded-full border border-sloth-forest bg-sloth-forest pr-2 pl-4 text-sm font-semibold text-white shadow-soft transition hover:bg-sloth-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
-                    onClick={panel.toggle}
-                    type="button"
-                >
-                    <TimerIcon />
-                    Modo foco
-                    <kbd
-                        aria-hidden="true"
-                        className="rounded-md bg-white/20 px-1.5 py-0.5 font-sans text-xs"
+            {/* Uma live só por aba: o player fica no dock que está à vista. */}
+            {isDesktop ? <LofiCard tone="dark" /> : null}
+            <div className="flex shrink-0 items-center gap-2">
+                <SoundChip onOpen={panel.toggle} tone="dark" />
+                {session ? (
+                    <SessionPill
+                        controls={panelId}
+                        onOpen={panel.toggle}
+                        open={panel.open}
+                        session={session}
+                        tone="dark"
+                    />
+                ) : (
+                    <button
+                        aria-controls={panelId}
+                        aria-expanded={panel.open}
+                        aria-keyshortcuts="F"
+                        className="flex min-h-12 cursor-pointer items-center gap-2 rounded-full border border-sloth-forest bg-sloth-forest pr-2 pl-4 text-sm font-semibold text-white shadow-soft transition hover:bg-sloth-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest"
+                        onClick={panel.toggle}
+                        type="button"
                     >
-                        F
-                    </kbd>
-                </button>
-            )}
+                        <TimerIcon />
+                        Modo foco
+                        <kbd
+                            aria-hidden="true"
+                            className="rounded-md bg-white/20 px-1.5 py-0.5 font-sans text-xs"
+                        >
+                            F
+                        </kbd>
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
 
 /**
  * Modo foco no celular: a pílula acima da barra de navegação enquanto há
- * sessão, e uma folha com o painel inteiro (aberta pela pílula, pelo menu
- * "Mais" ou pelo botão Focar de uma tarefa).
+ * sessão ou som, a live de lofi quando toca, e uma folha com o painel inteiro
+ * (aberta pela pílula, pelo menu "Mais" ou pelo botão Focar de uma tarefa).
  */
 export function FocusMobileDock() {
     const { session } = useFocusState();
+    const { current } = useSoundState();
+    const isDesktop = useMediaQuery(DESKTOP_QUERY);
     const rootRef = useRef<HTMLDivElement>(null);
     const panelRef = useRef<HTMLElement>(null);
     const panel = useFocusPanel(rootRef, panelRef);
     const panelId = "folha-foco";
+    const showLofi = !isDesktop && current?.kind === "lofi";
 
     return (
         <div ref={rootRef}>
             {panel.open ? (
-                <FocusPanel id={panelId} onClose={panel.close} panelRef={panelRef} tone="light" />
+                <FocusPanel
+                    // Com a live aberta, sobra menos altura para a folha.
+                    className={`mb-2 ${showLofi ? "max-h-[calc(100dvh-27rem)]" : "max-h-[calc(100dvh-10rem)]"}`}
+                    id={panelId}
+                    onClose={panel.close}
+                    panelRef={panelRef}
+                    tone="light"
+                />
             ) : null}
-            {session ? (
-                <div className="mb-2">
-                    <SessionPill
-                        controls={panelId}
-                        onOpen={panel.toggle}
-                        open={panel.open}
-                        session={session}
-                        tone="light"
-                    />
+            {showLofi ? (
+                // Folga para o botão "+" da barra, que sobe um pouco: nada cobre o vídeo.
+                <div className="mb-9 flex justify-end">
+                    <LofiCard tone="light" />
+                </div>
+            ) : null}
+            {session || current?.kind === "nature" ? (
+                <div className="mb-2 flex items-center justify-end gap-2">
+                    <SoundChip onOpen={panel.toggle} tone="light" />
+                    {session ? (
+                        <SessionPill
+                            controls={panelId}
+                            onOpen={panel.toggle}
+                            open={panel.open}
+                            session={session}
+                            tone="light"
+                        />
+                    ) : null}
                 </div>
             ) : null}
         </div>

@@ -16,6 +16,7 @@ import {
     settleSession,
 } from "./pomodoro";
 import type { FocusSession } from "./pomodoro";
+import { stopSound } from "./sound/sound-store";
 
 /** Fase que acabou há mais que isso (aba fechada, celular bloqueado) passa em silêncio. */
 const FRESH_MS = 60_000;
@@ -136,10 +137,11 @@ export function FocusEngine() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
-    // Ao sair do app (logout), o título volta ao normal.
+    // Ao sair do app (logout), o título volta ao normal e o som para.
     useEffect(
         () => () => {
             document.title = document.title.replace(TITLE_PREFIX, "");
+            stopSound();
         },
         [],
     );
