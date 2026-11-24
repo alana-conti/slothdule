@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 test.describe("captura rápida", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/today");
+    // Sem hidratar, o clique no botão não faz nada.
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Nova tarefa" }).click();
   });
 

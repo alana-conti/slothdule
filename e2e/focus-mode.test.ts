@@ -2,40 +2,45 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { createTaskByForm, taskCard, todayKey, uniqueTitle } from "./fixtures";
 
-/** Cartão do Modo foco no menu lateral (desktop). */
-function sidebarFocus(page: Page) {
-  return page.getByRole("complementary").getByRole("region", { name: "Modo foco" });
+/** Painel do Modo foco no desktop: abre por cima do botão fixo no canto. */
+function focusPanel(page: Page) {
+  return page.locator("#painel-foco");
 }
 
-async function startFromSidebar(page: Page, rhythm: RegExp) {
-  const card = sidebarFocus(page);
+/** Pílula com o relógio, no canto, enquanto há sessão. */
+function focusPill(page: Page) {
+  return page.getByRole("button", { name: /^Modo foco: / });
+}
 
-  await card.getByRole("button", { name: "Modo foco" }).click();
+async function chooseRhythmAndStart(page: Page, rhythm: RegExp) {
+  const panel = focusPanel(page);
+
   // O radio é visualmente oculto: o clique vai no rótulo, como a pessoa faz.
-  await card.locator("label").filter({ hasText: rhythm }).click();
-  await expect(card.getByRole("radio", { name: rhythm })).toBeChecked();
-  await card.getByRole("button", { name: "Começar foco" }).click();
+  await panel.locator("label").filter({ hasText: rhythm }).click();
+  await expect(panel.getByRole("radio", { name: rhythm })).toBeChecked();
+  await panel.getByRole("button", { name: "Começar foco" }).click();
 
-  return card;
+  return panel;
 }
 
 test.describe("modo foco (pomodoro)", () => {
-  test("começa pelo menu lateral, pausa, segue entre telas e encerra", async ({
+  test("começa pelo botão do canto, pausa, segue entre telas e encerra", async ({
     page,
   }) => {
     await page.goto("/today");
     await page.waitForLoadState("networkidle");
 
-    const card = await startFromSidebar(page, /Ritmo preguiça/);
-    const timer = card.getByRole("timer");
+    await page.getByRole("button", { name: "Modo foco", exact: true }).click();
+    const panel = await chooseRhythmAndStart(page, /Ritmo preguiça/);
+    const timer = panel.getByRole("timer");
 
     await expect(timer).toHaveText(/^1[45]:\d{2}$/);
-    await expect(card).toContainText("Foco livre");
+    await expect(panel).toContainText("Foco livre");
     await expect(page).toHaveTitle(/^\d{2}:\d{2} · Foco · /);
 
-    await card.getByRole("button", { name: "Pausar" }).click();
-    await expect(card.getByRole("button", { name: "Retomar" })).toBeVisible();
-    const pausedAt = await timer.textContent();
+    await panel.getByRole("button", { name: "Pausar" }).click();
+    await expect(panel.getByRole("button", { name: "Retomar" })).toBeVisible();
+    const pausedAt = (await timer.textContent()) ?? "";
 
     // O foco vive no layout: trocar de tela não reinicia nem para o relógio.
     await page
@@ -43,19 +48,41 @@ test.describe("modo foco (pomodoro)", () => {
       .getByRole("link", { name: "Calendário" })
       .click();
     await expect(page).toHaveURL(/\/calendar/);
-    await expect(sidebarFocus(page).getByRole("timer")).toHaveText(pausedAt ?? "");
+    await expect(focusPill(page)).toHaveAccessibleName(`Modo foco: Pausado, ${pausedAt}`);
 
     // Recarregar também não perde a sessão.
     await page.reload();
-    await expect(sidebarFocus(page).getByRole("timer")).toHaveText(pausedAt ?? "");
+    await expect(focusPill(page)).toHaveAccessibleName(`Modo foco: Pausado, ${pausedAt}`);
 
-    await sidebarFocus(page).getByRole("button", { name: "Retomar" }).click();
-    await sidebarFocus(page).getByRole("button", { name: "Encerrar foco" }).click();
+    await page.getByRole("button", { name: "Retomar foco" }).click();
+    await expect(focusPill(page)).toHaveAccessibleName(/^Modo foco: Foco, /);
 
-    await expect(sidebarFocus(page).getByRole("timer")).toHaveCount(0);
+    await focusPill(page).click();
+    await focusPanel(page).getByRole("button", { name: "Encerrar foco" }).click();
+
+    await expect(focusPill(page)).toHaveCount(0);
     await expect(
-      sidebarFocus(page).getByRole("button", { name: "Modo foco" }),
+      page.getByRole("button", { name: "Modo foco", exact: true }),
     ).toBeVisible();
+  });
+
+  test("a tecla F abre e fecha o painel, mas não dentro de campos", async ({ page }) => {
+    await page.goto("/today");
+    await page.waitForLoadState("networkidle");
+
+    await page.keyboard.press("f");
+    await expect(focusPanel(page)).toBeVisible();
+    await expect(focusPanel(page)).toBeFocused();
+
+    await page.keyboard.press("f");
+    await expect(focusPanel(page)).toBeHidden();
+
+    // Digitando no pop-up de nova tarefa, F é só uma letra.
+    await page.keyboard.press("n");
+    const dialog = page.getByRole("dialog", { name: "O que precisa sair da cabeça?" });
+    await expect(dialog).toBeVisible();
+    await page.keyboard.type("foco");
+    await expect(focusPanel(page)).toBeHidden();
   });
 
   test("o fim do foco avisa e começa a pausa sozinho", async ({ page }) => {
@@ -63,23 +90,24 @@ test.describe("modo foco (pomodoro)", () => {
     await page.goto("/today");
     await page.waitForLoadState("networkidle");
 
-    const card = await startFromSidebar(page, /Ritmo preguiça/);
+    await page.keyboard.press("f");
+    const panel = await chooseRhythmAndStart(page, /Ritmo preguiça/);
 
     await page.clock.fastForward("15:01");
 
     await expect(
       page.getByRole("status").filter({ hasText: "Foco concluído" }),
     ).toBeVisible();
-    await expect(card).toContainText("Pausa curta");
-    await expect(card.getByRole("img", { name: "1 de 4 focos até a pausa longa" })).toBeVisible();
+    await expect(panel).toContainText("Pausa curta");
+    await expect(panel.getByRole("img", { name: "1 de 4 focos até a pausa longa" })).toBeVisible();
 
     await page.clock.fastForward("05:01");
 
     await expect(
       page.getByRole("status").filter({ hasText: "Pausa feita" }),
     ).toBeVisible();
-    await expect(card.getByRole("button", { name: "Voltar ao foco" })).toBeVisible();
-    await expect(card.getByRole("timer")).toHaveText("15:00");
+    await expect(panel.getByRole("button", { name: "Voltar ao foco" })).toBeVisible();
+    await expect(panel.getByRole("timer")).toHaveText("15:00");
   });
 
   test("Focar liga a tarefa em andamento ao foco, e concluí-la a desliga", async ({
@@ -99,16 +127,18 @@ test.describe("modo foco (pomodoro)", () => {
 
     await row.getByRole("button", { name: "Focar nesta tarefa" }).click();
 
-    const card = sidebarFocus(page);
-    await expect(card.getByRole("timer")).toBeVisible();
-    await expect(card.getByRole("link", { name: title })).toBeVisible();
+    const panel = focusPanel(page);
+    await expect(panel.getByRole("timer")).toBeVisible();
+    await expect(panel.getByRole("link", { name: title })).toBeVisible();
+    await expect(focusPill(page)).toContainText(title);
     // Na linha, o botão vira o relógio da tarefa em foco.
     await expect(row.getByRole("button", { name: /^Em foco, \d{2}:\d{2}/ })).toBeVisible();
 
     await row.getByRole("button", { name: "Concluir tarefa", exact: true }).click();
 
-    await expect(card).toContainText("Foco livre");
-    await expect(card.getByRole("timer")).toBeVisible();
+    // A tarefa sai do foco; o relógio segue, como foco livre.
+    await expect(focusPill(page)).not.toContainText(title);
+    await expect(focusPill(page)).toHaveAccessibleName(/^Modo foco: Foco, /);
   });
 });
 

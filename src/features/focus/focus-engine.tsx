@@ -4,8 +4,9 @@ import { useEffect } from "react";
 
 import { useToast } from "@/components/sloth/toast";
 import { playSound } from "@/lib/audio/sounds";
+import { isLetterShortcut } from "@/lib/keyboard";
 
-import { setFocusState, useFocusState, useNow } from "./focus-store";
+import { setFocusState, toggleFocusPanel, useFocusState, useNow } from "./focus-store";
 import {
     PHASE_LABELS,
     RHYTHMS,
@@ -74,8 +75,8 @@ async function notifySystem({ title, description }: Announcement) {
 
 /**
  * Motor do Modo foco: vive uma vez no layout, sem interface. Passa as fases
- * quando o tempo acaba, avisa com som e mensagem e mostra o relógio no título
- * da aba.
+ * quando o tempo acaba, avisa com som e mensagem, mostra o relógio no título
+ * da aba e atende a tecla F (abre e fecha o painel).
  */
 export function FocusEngine() {
     const { toast } = useToast();
@@ -121,6 +122,19 @@ export function FocusEngine() {
 
         document.title = `${clock} · ${label} · ${base}`;
     }, [now, session]);
+
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (isLetterShortcut(event, "f")) {
+                event.preventDefault();
+                toggleFocusPanel();
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, []);
 
     // Ao sair do app (logout), o título volta ao normal.
     useEffect(

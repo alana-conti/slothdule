@@ -31,7 +31,7 @@ export default async function AppLayout({
       ) : null}
       {user ? <PushBootstrap /> : null}
       {user ? <FocusEngine /> : null}
-      <div className={user ? "pb-28 lg:pb-0 lg:pl-64" : undefined}>
+      <div className={user ? "pb-28 lg:pb-24 lg:pl-64" : undefined}>
         {children}
       </div>
       <NewTaskDialog />

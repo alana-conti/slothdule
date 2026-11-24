@@ -21,18 +21,8 @@ import {
     createTaskAction,
     listCategoriesAction,
 } from "@/features/tasks/actions";
+import { isLetterShortcut } from "@/lib/keyboard";
 import type { Category } from "@/types/tasks";
-
-function isTypingTarget(target: EventTarget | null) {
-    if (!(target instanceof HTMLElement)) {
-        return false;
-    }
-
-    return (
-        target.isContentEditable ||
-        ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
-    );
-}
 
 export function NewTaskDialog() {
     const dialogRef = useRef<HTMLDialogElement>(null);
@@ -129,16 +119,7 @@ export function NewTaskDialog() {
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
-            if (
-                event.key.toLowerCase() !== "n" ||
-                event.repeat ||
-                event.defaultPrevented ||
-                event.metaKey ||
-                event.ctrlKey ||
-                event.altKey ||
-                isTypingTarget(event.target) ||
-                document.querySelector("dialog[open]")
-            ) {
+            if (!isLetterShortcut(event, "n")) {
                 return;
             }
 

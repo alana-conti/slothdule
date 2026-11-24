@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { FocusMobileDock, FocusSidebarCard } from "@/features/focus/focus-dock";
+import { FocusDesktopDock, FocusMobileDock } from "@/features/focus/focus-dock";
 import { TimerIcon } from "@/features/focus/focus-panel";
 import { openFocusPanel } from "@/features/focus/focus-store";
 import { getUserInitial } from "@/features/settings/profile";
@@ -205,6 +205,7 @@ export function AppNavigation({ balance, user }: AppNavigationProps) {
                 pathname={pathname}
                 user={user}
             />
+            <FocusDesktopDock />
             {settingsOpen ? (
                 <SettingsDialog onClose={() => setSettingsOpen(false)} user={user} />
             ) : null}
@@ -312,8 +313,6 @@ function DesktopSidebar({
                     </div>
                 ))}
             </nav>
-
-            <FocusSidebarCard />
 
             <div className="flex flex-col gap-2 border-t border-sloth-border/70 pt-4">
                 <LeafBalance balance={balance} />

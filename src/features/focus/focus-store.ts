@@ -21,6 +21,8 @@ export const FOCUS_STORAGE_KEY = "slothdule:focus";
 
 /** Qualquer botão pode pedir para abrir o painel de foco (menu, tarefa). */
 export const OPEN_FOCUS_PANEL_EVENT = "slothdule:open-focus-panel";
+/** A tecla F abre e fecha o painel. */
+export const TOGGLE_FOCUS_PANEL_EVENT = "slothdule:toggle-focus-panel";
 
 const listeners = new Set<() => void>();
 let cachedRaw: string | null | undefined;
@@ -119,6 +121,10 @@ export function useNow(active: boolean) {
 
 export function openFocusPanel() {
     window.dispatchEvent(new Event(OPEN_FOCUS_PANEL_EVENT));
+}
+
+export function toggleFocusPanel() {
+    window.dispatchEvent(new Event(TOGGLE_FOCUS_PANEL_EVENT));
 }
 
 export function startFocus(task: FocusTask | null = null, rhythm?: FocusRhythm) {

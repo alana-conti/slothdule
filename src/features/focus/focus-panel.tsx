@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useId } from "react";
 
 import {
     chooseRhythm,
@@ -42,14 +43,66 @@ export function TimerIcon({ className = "size-5" }: { className?: string }) {
     );
 }
 
-const primaryButton =
-    "inline-flex min-h-10 flex-1 cursor-pointer items-center justify-center rounded-xl bg-sloth-moss px-3 text-sm font-semibold text-white transition hover:bg-sloth-forest focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest";
+/**
+ * - `light`: a folha do celular, no creme do app.
+ * - `dark`: o cartão fixo do desktop, em verde-floresta, para se destacar da tela.
+ */
+export type FocusTone = "light" | "dark";
 
-const secondaryButton =
-    "inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-sloth-border bg-sloth-card px-3 text-sm font-medium text-sloth-forest transition hover:bg-sloth-beige focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sloth-forest";
+const buttonBase =
+    "inline-flex min-h-10 cursor-pointer items-center justify-center rounded-xl px-3 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2";
 
-export function RhythmPicker() {
+const TONES = {
+    dark: {
+        breakBar: "bg-sloth-gold",
+        clock: "text-white",
+        dotDone: "bg-sloth-cream",
+        dotTodo: "bg-white/25",
+        eyebrow: "text-white/75",
+        focusBar: "bg-sloth-cream",
+        muted: "text-white/75",
+        primary: `${buttonBase} bg-sloth-cream font-semibold text-sloth-forest hover:bg-white focus-visible:outline-sloth-cream`,
+        radioOff: "border-white/40",
+        radioOn: "border-sloth-cream",
+        radioDot: "bg-sloth-cream",
+        rhythmOff: "border-white/15 text-white hover:bg-white/10",
+        rhythmOn: "border-white/50 bg-white/15 text-white",
+        rhythmOutline: "has-focus-visible:outline-sloth-cream",
+        secondary: `${buttonBase} border border-white/25 font-medium text-white hover:bg-white/10 focus-visible:outline-sloth-cream`,
+        strong: "text-white",
+        taskBox: "bg-white/10 text-white",
+        taskClear: "text-white/70 hover:bg-white/15 hover:text-white",
+        track: "bg-white/15",
+    },
+    light: {
+        breakBar: "bg-sloth-gold",
+        clock: "text-sloth-ink",
+        dotDone: "bg-sloth-moss",
+        dotTodo: "bg-sloth-border",
+        eyebrow: "text-sloth-moss",
+        focusBar: "bg-sloth-moss",
+        muted: "text-sloth-muted",
+        primary: `${buttonBase} bg-sloth-moss font-semibold text-white hover:bg-sloth-forest focus-visible:outline-sloth-forest`,
+        radioOff: "border-sloth-border",
+        radioOn: "border-sloth-moss",
+        radioDot: "bg-sloth-moss",
+        rhythmOff: "border-sloth-border bg-sloth-card text-sloth-ink hover:bg-sloth-beige",
+        rhythmOn: "border-sloth-moss/50 bg-sloth-moss/10 text-sloth-forest",
+        rhythmOutline: "has-focus-visible:outline-sloth-forest",
+        secondary: `${buttonBase} border border-sloth-border bg-sloth-card font-medium text-sloth-forest hover:bg-sloth-beige focus-visible:outline-sloth-forest`,
+        strong: "text-sloth-forest",
+        taskBox: "bg-sloth-beige/60 text-sloth-ink",
+        taskClear: "text-sloth-muted hover:bg-sloth-card hover:text-sloth-forest",
+        track: "bg-sloth-beige",
+    },
+} satisfies Record<FocusTone, Record<string, string>>;
+
+type Tone = (typeof TONES)[FocusTone];
+
+function RhythmPicker({ tone }: { tone: Tone }) {
     const { rhythm } = useFocusState();
+    // Desktop e celular têm cada um o seu painel: grupos de radio separados.
+    const groupName = useId();
 
     return (
         <fieldset>
@@ -61,17 +114,15 @@ export function RhythmPicker() {
 
                     return (
                         <label
-                            className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-sloth-forest ${
-                                selected
-                                    ? "border-sloth-moss/50 bg-sloth-moss/10 text-sloth-forest"
-                                    : "border-sloth-border bg-sloth-card text-sloth-ink hover:bg-sloth-beige"
+                            className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition has-focus-visible:outline-2 has-focus-visible:outline-offset-2 ${tone.rhythmOutline} ${
+                                selected ? tone.rhythmOn : tone.rhythmOff
                             }`}
                             key={value}
                         >
                             <input
                                 checked={selected}
                                 className="sr-only"
-                                name="focus-rhythm"
+                                name={groupName}
                                 onChange={() => chooseRhythm(value)}
                                 type="radio"
                                 value={value}
@@ -79,16 +130,16 @@ export function RhythmPicker() {
                             <span
                                 aria-hidden="true"
                                 className={`inline-flex size-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                                    selected ? "border-sloth-moss" : "border-sloth-border"
+                                    selected ? tone.radioOn : tone.radioOff
                                 }`}
                             >
                                 {selected ? (
-                                    <span className="size-1.5 rounded-full bg-sloth-moss" />
+                                    <span className={`size-1.5 rounded-full ${tone.radioDot}`} />
                                 ) : null}
                             </span>
                             <span className="min-w-0">
                                 <span className="block font-semibold">{config.label}</span>
-                                <span className="block text-xs text-sloth-muted">
+                                <span className={`block text-xs ${tone.muted}`}>
                                     {config.focusMinutes} min · pausa de {config.shortBreakMinutes}
                                 </span>
                             </span>
@@ -100,23 +151,23 @@ export function RhythmPicker() {
     );
 }
 
-function IdleContent() {
+function IdleContent({ tone }: { tone: Tone }) {
     return (
         <div className="grid gap-3">
-            <p className="text-sm text-sloth-muted">
+            <p className={`text-sm ${tone.muted}`}>
                 Um bloco de foco, uma pausa, e de novo. Dá para ligar a uma tarefa pelo botão{" "}
-                <span className="font-semibold text-sloth-forest">Focar</span>, em “Em foco
+                <span className={`font-semibold ${tone.strong}`}>Focar</span>, em “Em foco
                 agora”.
             </p>
-            <RhythmPicker />
-            <button className={primaryButton} onClick={() => startFocus()} type="button">
+            <RhythmPicker tone={tone} />
+            <button className={tone.primary} onClick={() => startFocus()} type="button">
                 Começar foco
             </button>
         </div>
     );
 }
 
-function CycleDots({ session }: { session: FocusSession }) {
+function CycleDots({ session, tone }: { session: FocusSession; tone: Tone }) {
     const { done, total } = getCyclePosition(session);
 
     return (
@@ -127,9 +178,7 @@ function CycleDots({ session }: { session: FocusSession }) {
         >
             {Array.from({ length: total }, (_, index) => (
                 <span
-                    className={`size-1.5 rounded-full ${
-                        index < done ? "bg-sloth-moss" : "bg-sloth-border"
-                    }`}
+                    className={`size-1.5 rounded-full ${index < done ? tone.dotDone : tone.dotTodo}`}
                     key={index}
                 />
             ))}
@@ -137,7 +186,7 @@ function CycleDots({ session }: { session: FocusSession }) {
     );
 }
 
-function ActiveContent({ session }: { session: FocusSession }) {
+function ActiveContent({ session, tone }: { session: FocusSession; tone: Tone }) {
     const now = useNow(session.status === "running");
     const remaining = getRemainingMs(session, now);
     const progress = getPhaseProgress(session, now);
@@ -152,31 +201,24 @@ function ActiveContent({ session }: { session: FocusSession }) {
     return (
         <div className="grid gap-3">
             <div className="flex items-center justify-between gap-2">
-                <p
-                    className={`text-xs font-semibold tracking-[0.14em] uppercase ${
-                        isBreak ? "text-sloth-gold" : "text-sloth-moss"
-                    }`}
-                >
+                <p className={`text-xs font-semibold tracking-[0.14em] uppercase ${tone.eyebrow}`}>
                     {phaseLabel}
                 </p>
-                <CycleDots session={session} />
+                <CycleDots session={session} tone={tone} />
             </div>
 
             <div>
                 <p
                     aria-label={`Tempo restante: ${formatClock(remaining)}`}
-                    className="font-semibold tracking-[-0.03em] text-sloth-ink tabular-nums text-4xl"
+                    className={`text-4xl font-semibold tracking-[-0.03em] tabular-nums ${tone.clock}`}
                     role="timer"
                 >
                     {formatClock(remaining)}
                 </p>
-                <div
-                    aria-hidden="true"
-                    className="mt-2 h-1.5 overflow-hidden rounded-full bg-sloth-beige"
-                >
+                <div aria-hidden="true" className={`mt-2 h-1.5 overflow-hidden rounded-full ${tone.track}`}>
                     <div
                         className={`h-full rounded-full transition-[width] duration-1000 ease-linear motion-reduce:transition-none ${
-                            isBreak ? "bg-sloth-gold" : "bg-sloth-moss"
+                            isBreak ? tone.breakBar : tone.focusBar
                         }`}
                         style={{ width: `${progress * 100}%` }}
                     />
@@ -184,9 +226,9 @@ function ActiveContent({ session }: { session: FocusSession }) {
             </div>
 
             {session.task ? (
-                <div className="flex items-start gap-2 rounded-xl bg-sloth-beige/60 px-3 py-2 text-sm">
+                <div className={`flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${tone.taskBox}`}>
                     <Link
-                        className="min-w-0 flex-1 font-medium text-sloth-ink hover:underline"
+                        className="min-w-0 flex-1 font-medium hover:underline"
                         href={`/tasks/${session.task.id}`}
                     >
                         <span className="sr-only">Tarefa em foco: </span>
@@ -194,7 +236,7 @@ function ActiveContent({ session }: { session: FocusSession }) {
                     </Link>
                     <button
                         aria-label="Desligar tarefa do foco"
-                        className="-mr-1 inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-xs text-sloth-muted transition hover:bg-sloth-card hover:text-sloth-forest"
+                        className={`-mr-1 inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-xs transition ${tone.taskClear}`}
                         onClick={clearFocusTask}
                         title="Desligar tarefa"
                         type="button"
@@ -203,22 +245,22 @@ function ActiveContent({ session }: { session: FocusSession }) {
                     </button>
                 </div>
             ) : (
-                <p className="text-sm text-sloth-muted">
+                <p className={`text-sm ${tone.muted}`}>
                     {isBreak ? "Respira. A tarefa espera você." : "Foco livre, sem tarefa ligada."}
                 </p>
             )}
 
             {session.status === "ready" ? (
-                <p className="text-sm text-sloth-forest">Pausa feita. Volte quando quiser.</p>
+                <p className={`text-sm ${tone.strong}`}>Pausa feita. Volte quando quiser.</p>
             ) : null}
 
             <div className="grid gap-2">
                 {session.status === "running" ? (
-                    <button className={primaryButton} onClick={pauseFocus} type="button">
+                    <button className={tone.primary} onClick={pauseFocus} type="button">
                         Pausar
                     </button>
                 ) : (
-                    <button className={primaryButton} onClick={resumeFocus} type="button">
+                    <button className={tone.primary} onClick={resumeFocus} type="button">
                         {session.status === "ready" ? "Voltar ao foco" : "Retomar"}
                     </button>
                 )}
@@ -226,7 +268,7 @@ function ActiveContent({ session }: { session: FocusSession }) {
                     {session.status !== "ready" ? (
                         <button
                             aria-label={isBreak ? "Pular pausa" : "Pular para a pausa"}
-                            className={`${secondaryButton} flex-1`}
+                            className={`${tone.secondary} flex-1`}
                             onClick={skipFocusPhase}
                             title={isBreak ? "Pular pausa" : "Pular para a pausa"}
                             type="button"
@@ -236,7 +278,7 @@ function ActiveContent({ session }: { session: FocusSession }) {
                     ) : null}
                     <button
                         aria-label="Encerrar foco"
-                        className={`${secondaryButton} flex-1 text-sloth-muted`}
+                        className={`${tone.secondary} flex-1`}
                         onClick={stopFocus}
                         title="Encerrar foco"
                         type="button"
@@ -249,9 +291,14 @@ function ActiveContent({ session }: { session: FocusSession }) {
     );
 }
 
-/** Conteúdo do Modo foco, igual no menu lateral e na folha do celular. */
-export function FocusPanelContent() {
+/** Conteúdo do Modo foco, igual no cartão do desktop e na folha do celular. */
+export function FocusPanelContent({ tone = "light" }: { tone?: FocusTone }) {
     const { session } = useFocusState();
+    const classes = TONES[tone];
 
-    return session ? <ActiveContent session={session} /> : <IdleContent />;
+    return session ? (
+        <ActiveContent session={session} tone={classes} />
+    ) : (
+        <IdleContent tone={classes} />
+    );
 }
