@@ -83,6 +83,9 @@ services:
       # Server Components / Server Actions falam com a API pela rede interna.
       BACKEND_URL: http://api:8000
       PORT: "3000"
+      # O Next standalone escuta em $HOSTNAME; o Docker põe ali o id do container,
+      # que resolve para o IP de UMA rede só (este serviço está em duas).
+      HOSTNAME: "0.0.0.0"
     ports:
       - "${WEB_PORT:-3000}:3000"
     networks:
