@@ -7,7 +7,7 @@ Usuário abre o Slothdule
 ↓
 Tela Hoje é exibida
 ↓
-Usuário vê "Em foco agora" (o que já está em andamento, de qualquer data), tarefas de hoje, depois as atrasadas (com um aviso "N atrasadas" no resumo do topo), e a carga estimada
+Usuário vê "Em foco agora" (o que já está em andamento, de qualquer data), tarefas de hoje (as atrasadas entram aqui, marcadas só com "Ficou de antes"; por dentro a prioridade conta um nível acima para ordenar a lista, sem alterar o que foi salvo e sem mostrar isso na etiqueta; o resumo do topo diz quantas ficaram de dias anteriores), e a carga estimada
 ↓
 Usuário identifica a tarefa mais urgente
 ↓

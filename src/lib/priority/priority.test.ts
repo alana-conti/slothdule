@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculatePriorityScore } from "./index";
+import { calculatePriorityScore, getEffectivePriority, raisePriority } from "./index";
 import type { Task } from "@/types/tasks";
 
 // Helper to create a dummy task
@@ -93,25 +93,51 @@ describe("calculatePriorityScore", () => {
     it("should add 80 points + 5 per day when overdue by 1 day", () => {
       const task = createTask({ priority: "medium", dueDate: "2026-06-11" });
       const result = calculatePriorityScore(task, currentDate);
-      // medium priority (30) + base overdue (80) + 1 day * 5 (5) = 115
-      expect(result.score).toBe(115);
+      // medium sobe para high (60) + base overdue (80) + 1 day * 5 (5) = 145
+      expect(result.score).toBe(145);
       expect(result.reasons).toContainEqual({ description: "Passou do prazo há 1 dia", points: 85 });
     });
 
     it("should add 80 points + 5 per day when overdue by 5 days", () => {
       const task = createTask({ priority: "medium", dueDate: "2026-06-07" });
       const result = calculatePriorityScore(task, currentDate);
-      // medium priority (30) + base overdue (80) + 5 days * 5 (25) = 135
-      expect(result.score).toBe(135);
+      // medium sobe para high (60) + base overdue (80) + 5 days * 5 (25) = 165
+      expect(result.score).toBe(165);
       expect(result.reasons).toContainEqual({ description: "Passou do prazo há 5 dias", points: 105 });
     });
 
     it("should cap dynamic overdue points at 40 (max 8 days overdue)", () => {
       const task = createTask({ priority: "medium", dueDate: "2026-06-02" }); // 10 days overdue
       const result = calculatePriorityScore(task, currentDate);
-      // medium priority (30) + base overdue (80) + max dynamic overdue (40) = 150
-      expect(result.score).toBe(150);
+      // medium sobe para high (60) + base overdue (80) + max dynamic overdue (40) = 180
+      expect(result.score).toBe(180);
       expect(result.reasons).toContainEqual({ description: "Passou do prazo há 10 dias", points: 120 });
+    });
+  });
+
+  describe("Atrasada sobe um nível", () => {
+    it("sobe cada nível uma vez e para em crítica", () => {
+      expect(raisePriority("low")).toBe("medium");
+      expect(raisePriority("medium")).toBe("high");
+      expect(raisePriority("high")).toBe("critical");
+      expect(raisePriority("critical")).toBe("critical");
+    });
+
+    it("só vale para tarefa aberta e com prazo vencido", () => {
+      const overdue = { dueDate: "2026-06-11", priority: "low" as const };
+
+      expect(getEffectivePriority(createTask(overdue), currentDate)).toBe("medium");
+      expect(getEffectivePriority(createTask({ ...overdue, dueDate: currentDate }), currentDate)).toBe("low");
+      expect(getEffectivePriority(createTask({ ...overdue, status: "done" }), currentDate)).toBe("low");
+    });
+
+    it("explica a subida de nível no score", () => {
+      const result = calculatePriorityScore(createTask({ priority: "low", dueDate: "2026-06-11" }), currentDate);
+
+      expect(result.reasons[0]).toEqual({
+        description: "Prioridade baixa subiu para média por estar atrasada",
+        points: 30,
+      });
     });
   });
 

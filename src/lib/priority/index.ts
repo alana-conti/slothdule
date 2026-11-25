@@ -10,6 +10,27 @@ export type PriorityScoreResult = {
   reasons: PriorityExplanation[];
 };
 
+const priorityLadder: TaskPriority[] = ["low", "medium", "high", "critical"];
+
+/** Um nível acima do informado; "crítica" é o teto. */
+export function raisePriority(priority: TaskPriority): TaskPriority {
+  const index = priorityLadder.indexOf(priority);
+
+  return priorityLadder[Math.min(index + 1, priorityLadder.length - 1)];
+}
+
+/**
+ * Prioridade que vale hoje: tarefa aberta e atrasada sobe um nível. Não mexe no
+ * que a pessoa escolheu: ao reagendar, a prioridade original volta a valer.
+ */
+export function getEffectivePriority(task: Task, currentDateStr: string) {
+  const isOpen = task.status !== "done" && task.status !== "archived";
+
+  return isOpen && task.dueDate < currentDateStr
+    ? raisePriority(task.priority)
+    : task.priority;
+}
+
 /**
  * Calcula o score de prioridade de uma tarefa com base na data atual.
  * Função pura e sem efeitos colaterais.
@@ -54,10 +75,14 @@ export function calculatePriorityScore(
     low: "baixa",
   };
 
-  const basePoints = priorityScores[task.priority] ?? 0;
+  const effectivePriority = getEffectivePriority(task, currentDateStr);
+  const basePoints = priorityScores[effectivePriority] ?? 0;
   score += basePoints;
   reasons.push({
-    description: `Prioridade manual definida como ${priorityLabels[task.priority]}`,
+    description:
+      effectivePriority === task.priority
+        ? `Prioridade manual definida como ${priorityLabels[task.priority]}`
+        : `Prioridade ${priorityLabels[task.priority]} subiu para ${priorityLabels[effectivePriority]} por estar atrasada`,
     points: basePoints,
   });
 

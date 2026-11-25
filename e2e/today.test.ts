@@ -24,35 +24,23 @@ test.describe("tela Hoje", () => {
     await expect(todaySection).toContainText(title);
   });
 
-  test("tarefa atrasada aparece em Tarefas atrasadas", async ({ page }) => {
+  test("tarefa atrasada aparece em Tarefas de hoje, marcada com calma", async ({
+    page,
+  }) => {
     const title = uniqueTitle("Tarefa atrasada");
     await createTaskByForm(page, { title, dueDate: todayKey(-2) });
 
     const card = taskCard(page, title);
     await expect(card).toBeVisible();
-    await expect(card.getByText("Passou do prazo")).toBeVisible();
+    await expect(card.getByText("Ficou de antes")).toBeVisible();
     await expect(
       page
         .locator("section")
-        .filter({ has: page.getByRole("heading", { name: "Tarefas atrasadas" }) }),
+        .filter({ has: page.getByRole("heading", { name: "Tarefas de hoje" }) }),
     ).toContainText(title);
-  });
-
-  test("tarefas de hoje vêm antes das atrasadas", async ({ page }) => {
-    const title = uniqueTitle("Ordem das seções");
-    await createTaskByForm(page, { title, dueDate: todayKey(-1) });
-
-    const headings = await page
-      .getByRole("heading", { level: 2 })
-      .allTextContents();
-
-    expect(headings.indexOf("Tarefas de hoje")).toBeGreaterThanOrEqual(0);
-    expect(headings.indexOf("Tarefas de hoje")).toBeLessThan(
-      headings.indexOf("Tarefas atrasadas"),
-    );
     await expect(
-      page.getByRole("link", { name: /atrasadas?, mais abaixo/ }),
-    ).toBeVisible();
+      page.getByRole("heading", { name: "Tarefas atrasadas" }),
+    ).toHaveCount(0);
   });
 
   test("a área Em foco agora é fixa na Hoje e mostra o contador N/2", async ({

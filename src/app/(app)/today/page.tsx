@@ -12,7 +12,7 @@ import {
   getTodayDateKey,
   groupTasksForToday,
 } from "@/features/tasks/today";
-import { calculatePriorityScore } from "@/lib/priority";
+import { calculatePriorityScore, getEffectivePriority } from "@/lib/priority";
 import { getCurrentUser } from "@/lib/api/server";
 import type { Category, Task } from "@/types/tasks";
 
@@ -39,7 +39,6 @@ type TaskSectionProps = {
    */
   focusTasks?: Task[];
   id?: string;
-  isOverdue?: boolean;
   label: string;
   tasks: Task[];
   title: string;
@@ -228,7 +227,6 @@ function TaskSection({
   emptyMessage,
   focusTasks,
   id,
-  isOverdue = false,
   label,
   tasks,
   title,
@@ -236,20 +234,12 @@ function TaskSection({
 }: TaskSectionProps) {
   return (
     <section
-      className={`scroll-mt-6 rounded-card border p-5 sm:p-7 ${
-        isOverdue
-          ? "border-sloth-terracotta/30 bg-sloth-terracotta/5"
-          : "border-sloth-border bg-sloth-card/55"
-      }`}
+      className="scroll-mt-6 rounded-card border border-sloth-border bg-sloth-card/55 p-5 sm:p-7"
       id={id}
     >
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p
-            className={`text-xs font-semibold tracking-[0.18em] uppercase ${
-              isOverdue ? "text-sloth-terracotta" : "text-sloth-moss"
-            }`}
-          >
+          <p className="text-xs font-semibold tracking-[0.18em] text-sloth-moss uppercase">
             {label}
           </p>
           <h2 className="mt-2 text-2xl font-semibold text-sloth-ink">
@@ -257,13 +247,7 @@ function TaskSection({
           </h2>
           <p className="mt-1 text-sm text-sloth-muted">{description}</p>
         </div>
-        <span
-          className={`w-fit rounded-full px-3 py-1 text-sm font-semibold ${
-            isOverdue
-              ? "bg-sloth-terracotta/10 text-sloth-terracotta"
-              : "bg-sloth-beige text-sloth-forest"
-          }`}
-        >
+        <span className="w-fit rounded-full bg-sloth-beige px-3 py-1 text-sm font-semibold text-sloth-forest">
           {tasks.length + (focusTasks?.length ?? 0)}
         </span>
       </div>
@@ -281,7 +265,7 @@ function TaskSection({
           {tasks.map((task) => (
             <TaskRow
               categories={categories}
-              isOverdue={isOverdue}
+              isOverdue={task.dueDate < todayDate}
               key={task.id}
               priority={calculatePriorityScore(task, todayDate)}
               task={task}
@@ -327,13 +311,12 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
   const dailyLoad = formatEstimatedMinutes(dailyMinutes);
   const isHeavyDay = dailyMinutes > 8 * 60;
   const criticalToday = groups.today.filter(
-    (task) => task.priority === "critical",
+    (task) => getEffectivePriority(task, todayDate) === "critical",
   ).length;
   // Quem está em andamento vai para a área "Em foco agora" dentro de Hoje e sai
   // da lista da sua data.
   const notInProgress = (task: Task) => task.status !== "in_progress";
   const todayRest = groups.today.filter(notInProgress);
-  const overdueRest = groups.overdue.filter(notInProgress);
   const upcomingRest = groups.upcoming.filter(notInProgress);
 
   return (
@@ -408,15 +391,12 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
                 ? "O espaço de hoje está livre"
                 : "Passos que pedem atenção agora"}
             </p>
-            {overdueRest.length > 0 ? (
-              <a
-                className="mt-2 inline-flex text-sm font-medium text-sloth-terracotta underline-offset-2 hover:underline"
-                href="#atrasadas"
-              >
-                {overdueRest.length === 1
-                  ? "1 atrasada, mais abaixo ↓"
-                  : `${overdueRest.length} atrasadas, mais abaixo ↓`}
-              </a>
+            {groups.overdue.length > 0 ? (
+              <p className="mt-2 text-sm font-medium text-sloth-forest">
+                {groups.overdue.length === 1
+                  ? "1 ficou de dias anteriores"
+                  : `${groups.overdue.length} ficaram de dias anteriores`}
+              </p>
             ) : null}
           </article>
 
@@ -443,7 +423,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
           <TaskSection
             categories={categories}
             completedTodayTasks={groups.completedToday}
-            description="Tarefas previstas para hoje, inclusive as que atravessam mais de um dia."
+            description="Tarefas previstas para hoje, mais as que ficaram de antes e já subiram na fila."
             emptyMessage={
               groups.completedToday.length > 0
                 ? "Tudo o que estava previsto para hoje está feito."
@@ -454,18 +434,6 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             label="Agora"
             tasks={todayRest}
             title="Tarefas de hoje"
-            todayDate={todayDate}
-          />
-
-          <TaskSection
-            categories={categories}
-            description="Prazos que passaram e ainda estão abertos"
-            emptyMessage="Nada atrasado. O dia começa mais leve."
-            id="atrasadas"
-            isOverdue
-            label="Atenção!"
-            tasks={overdueRest}
-            title="Tarefas atrasadas"
             todayDate={todayDate}
           />
 
@@ -501,8 +469,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
           </section>
         ) : null}
 
-        {groups.overdue.length === 0 &&
-        groups.today.length === 0 &&
+        {groups.today.length === 0 &&
         groups.upcoming.length === 0 ? (
           <div className="mt-8 flex flex-col items-center rounded-card border border-dashed border-sloth-border bg-sloth-card px-6 py-10 text-center">
             <Image

@@ -9,6 +9,7 @@ export const OPEN_TASK_STATUSES = ["todo", "in_progress", "waiting"] as const;
 export type TodayTaskGroups = {
   /** Tarefas em andamento, de qualquer data. Também aparecem no grupo da sua data. */
   inProgress: Task[];
+  /** As atrasadas em aberto. Também fazem parte de `today`: atraso é coisa para hoje. */
   overdue: Task[];
   today: Task[];
   upcoming: Task[];
@@ -104,8 +105,10 @@ export function groupTasksForToday(
       task.status as (typeof OPEN_TASK_STATUSES)[number],
     ),
   );
+  const isOverdue = (task: Task) => task.dueDate < todayDate;
   const isScheduledForToday = (task: Task) =>
-    getTaskScheduleStart(task) <= todayDate && task.dueDate >= todayDate;
+    isOverdue(task) ||
+    (getTaskScheduleStart(task) <= todayDate && task.dueDate >= todayDate);
 
   return {
     inProgress: openTasks
@@ -116,7 +119,7 @@ export function groupTasksForToday(
         ),
       ),
     overdue: openTasks
-      .filter((task) => task.dueDate < todayDate)
+      .filter(isOverdue)
       .sort((a, b) =>
         compareByScore(a, b, todayDate, (l, r) =>
           l.dueDate.localeCompare(r.dueDate),
@@ -178,11 +181,7 @@ export function isDayComplete(
 
   const groups = groupTasksForToday(tasks, todayDate);
 
-  return (
-    groups.inProgress.length === 0 &&
-    groups.overdue.length === 0 &&
-    groups.today.length === 0
-  );
+  return groups.inProgress.length === 0 && groups.today.length === 0;
 }
 
 export function getDailyEstimatedMinutes(tasks: Task[]) {

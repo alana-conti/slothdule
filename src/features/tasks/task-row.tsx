@@ -463,7 +463,7 @@ export function TaskRow({
             aria-busy={pending}
             className={`rounded-2xl border transition ${
                 isOverdue
-                    ? "border-sloth-terracotta/35 bg-sloth-terracotta/5"
+                    ? "border-sloth-amber/40 bg-sloth-amber/5"
                     : "border-sloth-border bg-sloth-card"
             } ${isFinished ? "opacity-80" : ""}`}
         >
@@ -568,8 +568,8 @@ export function TaskRow({
                             {schedule ?? "Sem estimativa"}
                         </button>
                         {isOverdue ? (
-                            <span className="font-medium text-sloth-terracotta">
-                                Passou do prazo
+                            <span className="rounded-full bg-sloth-amber/20 px-2 py-0.5 font-medium text-sloth-ink">
+                                Ficou de antes
                             </span>
                         ) : null}
                     </div>
@@ -682,8 +682,9 @@ export function TaskRow({
                     ) : null}
 
                     {isOverdue ? (
-                        <p className="mt-3 text-sm font-medium text-sloth-terracotta">
-                            Essa tarefa passou do prazo. Quer reorganizar?
+                        <p className="mt-3 text-sm font-medium text-sloth-forest">
+                            Essa ficou de dias anteriores, então subiu na fila de
+                            hoje. Quer reagendar para outro dia?
                         </p>
                     ) : null}
 

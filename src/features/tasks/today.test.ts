@@ -57,7 +57,7 @@ describe("groupTasksForToday", () => {
     expect(groupTasksForToday([task], today).upcoming).toEqual([task]);
   });
 
-  it("keeps overdue tasks separate from today's tasks", () => {
+  it("traz as atrasadas para hoje, sem deixar de listá-las como atrasadas", () => {
     const task = createTask({
       startDate: "2026-06-09",
       dueDate: "2026-06-11",
@@ -66,7 +66,8 @@ describe("groupTasksForToday", () => {
     const groups = groupTasksForToday([task], today);
 
     expect(groups.overdue).toEqual([task]);
-    expect(groups.today).toEqual([]);
+    expect(groups.today).toEqual([task]);
+    expect(groups.upcoming).toEqual([]);
   });
 });
 
@@ -262,7 +263,7 @@ describe("isDayComplete", () => {
     expect(isDayComplete(tasks, "a", today)).toBe(false);
   });
 
-  it("não vale com tarefa atrasada aberta", () => {
+  it("não vale com tarefa atrasada aberta, que agora também é de hoje", () => {
     const tasks = [
       createTask({ id: "a", ...doneNow }),
       createTask({ id: "atrasada", dueDate: "2026-06-10" }),
