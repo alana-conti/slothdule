@@ -367,7 +367,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             }`}
           >
             <p className="text-sm font-medium text-sloth-muted">
-              Carga estimada de hoje
+              Carga estimada
             </p>
             <p className="mt-2 text-3xl font-semibold text-sloth-ink">
               {dailyLoad}
@@ -381,7 +381,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
 
           <article className="rounded-card border border-sloth-border bg-sloth-card p-6">
             <p className="text-sm font-medium text-sloth-muted">
-              Tarefas para hoje
+              Tarefas
             </p>
             <p className="mt-2 text-3xl font-semibold text-sloth-ink">
               {groups.today.length}
@@ -391,18 +391,11 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
                 ? "O espaço de hoje está livre"
                 : "Passos que pedem atenção agora"}
             </p>
-            {groups.overdue.length > 0 ? (
-              <p className="mt-2 text-sm font-medium text-sloth-forest">
-                {groups.overdue.length === 1
-                  ? "1 ficou de dias anteriores"
-                  : `${groups.overdue.length} ficaram de dias anteriores`}
-              </p>
-            ) : null}
           </article>
 
           <article className="rounded-card border border-sloth-border bg-sloth-card p-6">
             <p className="text-sm font-medium text-sloth-muted">
-              Prioritárias hoje
+              Prioritárias
             </p>
             <p className="mt-2 text-3xl font-semibold text-sloth-ink">
               {criticalToday}
