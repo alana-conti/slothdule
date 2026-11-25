@@ -10,7 +10,7 @@ test.describe("tela Hoje", () => {
   test("mostra o resumo do dia", async ({ page }) => {
     await expect(page.getByText("Carga estimada de hoje")).toBeVisible();
     await expect(page.getByText("Tarefas para hoje")).toBeVisible();
-    await expect(page.getByText("Prioridade crítica hoje")).toBeVisible();
+    await expect(page.getByText("Prioritárias hoje")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Uma coisa de cada vez" })).toBeVisible();
   });
 

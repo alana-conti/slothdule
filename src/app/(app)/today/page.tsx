@@ -402,7 +402,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
 
           <article className="rounded-card border border-sloth-border bg-sloth-card p-6">
             <p className="text-sm font-medium text-sloth-muted">
-              Prioridade crítica hoje
+              Prioritárias hoje
             </p>
             <p className="mt-2 text-3xl font-semibold text-sloth-ink">
               {criticalToday}
@@ -410,7 +410,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
             <p className="mt-2 text-sm text-sloth-muted">
               {criticalToday > 0
                 ? "Vale começar por aqui, sem pressa"
-                : "Nenhuma tarefa crítica para hoje"}
+                : "Nenhuma tarefa prioritária para hoje"}
             </p>
           </article>
         </section>
