@@ -387,7 +387,7 @@ Usuário abre a tela Hoje no começo do dia
 ↓
 O Plano do dia (logo depois da Rotina de hoje) mostra as sugestões: tudo que tem prazo hoje ou ficou de antes, mais uma antecipação em dourado
 ↓
-✓ põe no fim do plano; ✕ ("Agora não") deixa a tarefa com o prazo de hoje em "Também para hoje"
+"Aceitar" põe no fim do plano; "Hoje não" deixa a tarefa com o prazo de hoje em "Também para hoje"
 ↓
 Usuário arrasta as tarefas para ordenar o plano; a tela segue essa ordem o dia todo
 ```

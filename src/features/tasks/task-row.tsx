@@ -65,7 +65,7 @@ type TaskRowProps = {
 };
 
 const planButtonClasses =
-    "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border text-sm transition disabled:cursor-wait disabled:opacity-60";
+    "inline-flex min-h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border px-4 text-xs font-semibold transition disabled:cursor-wait disabled:opacity-60";
 
 const statusLabels: Record<TaskStatus, string> = {
     todo: "A fazer",
@@ -498,10 +498,19 @@ export function TaskRow({
         <article
             aria-busy={pending}
             className={`rounded-2xl border transition ${
-                plan?.headStart && plan.mode === "suggested"
-                    ? "border-sloth-gold bg-sloth-gold/15"
+                plan?.mode === "suggested" && plan.headStart
+                    ? // A antecipação é especial: dourado de verdade, sólido e em destaque.
+                      "border-2 border-sloth-gold bg-[linear-gradient(110deg,color-mix(in_srgb,var(--color-sloth-gold)_20%,var(--color-sloth-card)),color-mix(in_srgb,var(--color-sloth-gold)_50%,var(--color-sloth-card)))] shadow-soft [&_.text-sloth-muted]:text-sloth-ink/85"
+                    : plan?.mode === "suggested"
+                    ? // Sugestão ainda não está no plano: pontilhada e translúcida.
+                      `border-2 border-dashed bg-sloth-card/45 ${
+                          isOverdue
+                              ? "border-sloth-amber/70"
+                              : "border-sloth-forest/35"
+                      }`
                     : isOverdue
-                      ? "border-sloth-amber/40 bg-sloth-amber/5"
+                      ? // Base sólida: o tom não muda sobre o fundo verde do plano.
+                        "border-sloth-amber/40 bg-[color-mix(in_srgb,var(--color-sloth-amber)_5%,var(--color-sloth-card))]"
                       : "border-sloth-border bg-sloth-card"
             } ${isFinished ? "opacity-80" : ""}`}
         >
@@ -614,10 +623,12 @@ export function TaskRow({
                         ) : null}
                         {plan?.tag ? (
                             <span
-                                className={`rounded-full px-2 py-0.5 font-medium ${
-                                    plan.headStart
-                                        ? "bg-sloth-gold/25 text-sloth-ink"
-                                        : "bg-sloth-moss/10 text-sloth-forest"
+                                className={`rounded-full px-2 py-0.5 ${
+                                    plan.headStart && plan.mode === "suggested"
+                                        ? "bg-sloth-gold font-semibold text-sloth-ink"
+                                        : plan.headStart
+                                          ? "bg-sloth-gold/25 font-medium text-sloth-ink"
+                                          : "bg-sloth-moss/10 font-medium text-sloth-forest"
                                 }`}
                             >
                                 {plan.headStart ? (
@@ -629,7 +640,7 @@ export function TaskRow({
                     </div>
 
                     {plan?.reason ? (
-                        <p className="mt-1 text-xs text-sloth-muted">
+                        <p className="mt-1 text-xs font-medium text-sloth-ink">
                             {plan.reason}
                         </p>
                     ) : null}
@@ -657,24 +668,20 @@ export function TaskRow({
                 {plan?.mode === "suggested" ? (
                     <>
                         <button
-                            aria-label="Pôr no plano"
-                            className={`${planButtonClasses} border-sloth-moss bg-sloth-moss text-white hover:bg-sloth-forest`}
+                            className={`${planButtonClasses} border-sloth-forest bg-sloth-forest text-white hover:bg-sloth-ink`}
                             disabled={pending}
                             onClick={() => decidePlan(true)}
-                            title="Pôr no plano"
                             type="button"
                         >
-                            <span aria-hidden="true">✓</span>
+                            Aceitar
                         </button>
                         <button
-                            aria-label="Agora não"
-                            className={`${planButtonClasses} border-sloth-border text-sloth-muted hover:bg-sloth-beige`}
+                            className={`${planButtonClasses} border-sloth-forest/40 bg-sloth-card text-sloth-forest hover:bg-sloth-beige`}
                             disabled={pending}
                             onClick={() => decidePlan(false)}
-                            title="Agora não"
                             type="button"
                         >
-                            <span aria-hidden="true">✕</span>
+                            Hoje não
                         </button>
                     </>
                 ) : plan?.mode === "out" ? (

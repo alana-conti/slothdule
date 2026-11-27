@@ -165,7 +165,12 @@ Visual sugerido:
 - Novas telas entram em `groups` em `src/components/sloth/app-navigation.tsx`; o menu vive no layout `(app)`, não nas páginas.
 - O pop-up de nova tarefa abre por eventos (`src/features/tasks/new-task-events.ts`) ou pela tecla N.
 
-## 12. Antecipação (Plano do dia)
+## 12. Plano do dia e antecipação
 
-- A sugestão de adiantar uma tarefa futura é a única linha em **verde com dourado**: borda e fundo em dourado folha (`sloth-gold`), etiqueta "🍃 Adiantar" e o ✓ verde musgo. No plano, a tarefa aceita mantém só a etiqueta dourada "Adiantada".
+- A seção **Plano do dia** é a única com fundo verde: verde folha (`sloth-leaf`) a 30% sobre o creme, borda verde folha e título em verde floresta. O musgo diluído fica acinzentado sobre o creme quente; o verde floresta como fundo pesaria demais numa seção longa.
+- Dentro dela, os cards seguem brancos quentes e saltam sobre o verde; "Em foco agora" vira uma bandeja clara. Fundos tingidos de card (atrasada, antecipação) usam base sólida (`color-mix` com `sloth-card`) para não ficarem esverdeados.
+- Texto pequeno sobre o verde é verde floresta, não cinza: o cinza quente fica abaixo de 4,5:1 ali.
+
+- **Sugestão x plano:** o que já está no plano é card branco quente, sólido. Sugestão ainda não decidida é card **pontilhado** (borda de 2px tracejada) e translúcido, deixando o verde aparecer, com dois botões de texto: **Aceitar** (cheio, verde floresta) e **Hoje não** (contorno). A borda pontilhada é verde floresta, âmbar se a tarefa ficou de antes.
+- A sugestão de adiantar uma tarefa futura é a exceção, para ficar claro que é especial: **fundo dourado de verdade** (degradê sólido de dourado folha claro para mais cheio, sem animação), borda dourada contínua de 2px, sombra leve e etiqueta "🍃 Adiantar" em dourado cheio com texto escuro. O "Aceitar" segue verde floresta: verde com dourado. No plano, a tarefa aceita mantém só a etiqueta dourada "Adiantada".
 - O dourado não é alerta nem prioridade: marca "um passo à frente", sempre com o motivo em texto.

@@ -23,10 +23,10 @@ test.describe("plano do dia", () => {
     await expect(suggestions).toContainText(accepted);
     await expect(suggestions).toContainText(declined);
 
-    await taskCard(page, accepted).getByRole("button", { name: "Pôr no plano" }).click();
+    await taskCard(page, accepted).getByRole("button", { name: "Aceitar" }).click();
     await expect(plan).toContainText(accepted);
 
-    await taskCard(page, declined).getByRole("button", { name: "Agora não" }).click();
+    await taskCard(page, declined).getByRole("button", { name: "Hoje não" }).click();
     const outside = section(page, "Também para hoje");
     await expect(outside).toContainText(declined);
     await expect(suggestions.filter({ hasText: declined })).toHaveCount(0);
@@ -54,7 +54,7 @@ test.describe("plano do dia", () => {
 
     const plan = page.getByRole("list", { name: "Plano do dia, em ordem" });
     for (const title of [first, second]) {
-      await taskCard(page, title).getByRole("button", { name: "Pôr no plano" }).click();
+      await taskCard(page, title).getByRole("button", { name: "Aceitar" }).click();
       await expect(plan).toContainText(title);
     }
 
@@ -86,7 +86,7 @@ test.describe("plano do dia", () => {
 
     const plan = page.getByRole("list", { name: "Plano do dia, em ordem" });
     for (const title of [first, second]) {
-      await taskCard(page, title).getByRole("button", { name: "Pôr no plano" }).click();
+      await taskCard(page, title).getByRole("button", { name: "Aceitar" }).click();
       await expect(plan).toContainText(title);
     }
 

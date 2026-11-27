@@ -57,7 +57,7 @@ def decide_task(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    """Põe a tarefa no fim do plano do dia, ou a recusa ("Agora não")."""
+    """Põe a tarefa no fim do plano do dia, ou a recusa ("Hoje não")."""
     task = require_owned_task(db, user.id, task_id)
     already_in = task.plan_date == plan_date and task.plan_position is not None
     if payload.in_plan and not already_in:

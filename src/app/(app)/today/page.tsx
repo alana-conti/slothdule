@@ -87,8 +87,9 @@ function FocusArea({
       aria-label="Em foco agora"
       className={`mb-4 rounded-2xl border p-3 ${
         isOver
-          ? "border-sloth-amber/45 bg-sloth-amber/10"
-          : "border-sloth-moss/30 bg-sloth-moss/5"
+          ? // Base sólida: o âmbar translúcido vira oliva sobre o verde do plano.
+            "border-sloth-amber/70 bg-[color-mix(in_srgb,var(--color-sloth-amber)_14%,var(--color-sloth-card))]"
+          : "border-sloth-moss/30 bg-sloth-card/70"
       }`}
       role="region"
     >
@@ -311,7 +312,7 @@ type DayPlanSectionProps = {
 
 /**
  * A seção principal do dia. No começo do dia, o que é de hoje chega como
- * sugestão (✓ põe no plano, ✕ deixa em "Também para hoje"), mais uma
+ * sugestão ("Aceitar" põe no plano, "Hoje não" deixa em "Também para hoje"), mais uma
  * antecipação em dourado. O que entra no plano é ordenado arrastando.
  */
 function DayPlanSection({
@@ -327,24 +328,27 @@ function DayPlanSection({
 
   return (
     <section
-      className="scroll-mt-6 rounded-card border border-sloth-moss/35 bg-sloth-card/55 p-5 sm:p-7"
+      // Verde folha diluído no creme: destaca a seção principal sem
+      // virar um bloco escuro; os cards brancos quentes saltam por cima.
+      className="scroll-mt-6 rounded-card border border-sloth-leaf/60 bg-sloth-leaf/30 p-5 shadow-soft sm:p-7"
       id="hoje"
     >
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold tracking-[0.18em] text-sloth-moss uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-sloth-forest uppercase">
             Agora
           </p>
-          <h2 className="mt-2 text-2xl font-semibold text-sloth-ink">
+          <h2 className="mt-2 text-2xl font-semibold text-sloth-forest">
             Plano do dia
           </h2>
-          <p className="mt-1 text-sm text-sloth-muted">
+          {/* Floresta, não cinza: sobre o verde, o cinza fica abaixo de 4,5:1. */}
+          <p className="mt-1 text-sm text-sloth-forest">
             {plan.length === 0 && hasSuggestions
               ? "O que entra hoje? Aceite ou recuse as sugestões e depois arraste para ordenar."
               : "Sua ordem para hoje. Arraste uma tarefa para mudar (no celular, segure antes de arrastar)."}
           </p>
         </div>
-        <span className="w-fit rounded-full bg-sloth-beige px-3 py-1 text-sm font-semibold text-sloth-forest">
+        <span className="w-fit rounded-full bg-sloth-card px-3 py-1 text-sm font-semibold text-sloth-forest">
           {plan.length + focusTasks.length}
           <span className="sr-only"> no plano</span>
         </span>
@@ -385,7 +389,7 @@ function DayPlanSection({
           role="region"
         >
           <div className="flex items-center justify-between gap-3 px-1">
-            <p className="text-xs font-semibold tracking-[0.14em] text-sloth-moss uppercase">
+            <p className="text-xs font-semibold tracking-[0.14em] text-sloth-forest uppercase">
               Sugestões para o plano
             </p>
             {suggestions.length > 1 ? (
