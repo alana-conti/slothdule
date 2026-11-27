@@ -255,9 +255,12 @@ export const HEAD_START_SNOOZE_DAYS = 3;
 export type DayPlanGroups = {
   /** No plano de hoje, na ordem da pessoa. Em andamento fica no foco, fora daqui. */
   plan: Task[];
-  /** Sem decisão hoje: de hoje (inclusive atrasadas) ou do plano de um dia anterior. */
+  /** Sem decisão hoje: atrasadas, com prazo hoje ou do plano de um dia anterior. */
   suggestions: Task[];
-  /** De hoje, mas recusadas no plano: "Também para hoje". */
+  /**
+   * De hoje, mas fora do plano: "Também para hoje". As recusadas e as que não
+   * viram sugestão (prazo mais à frente com início já passado, ou sem prazo).
+   */
   outside: Task[];
   /** A antecipação do dia (no máximo uma), ainda sem decisão. */
   headStart: Task | null;
@@ -285,18 +288,19 @@ export function groupDayPlan(
     (task) => task.status === "todo" || task.status === "waiting",
   );
   const decidedToday = (task: Task) => task.planDate === todayDate;
+  // Para não lotar a lista: só o que vence hoje, o atrasado e o que sobrou do plano.
+  const isSuggested = (task: Task) =>
+    !decidedToday(task) &&
+    (isTaskOverdue(task, todayDate) ||
+      task.dueDate === todayDate ||
+      wasInEarlierPlan(task, todayDate));
 
   return {
     plan: waiting
       .filter((task) => isInDayPlan(task, todayDate))
       .sort((left, right) => left.planPosition! - right.planPosition!),
     suggestions: waiting
-      .filter(
-        (task) =>
-          !decidedToday(task) &&
-          (isTaskScheduledForToday(task, todayDate) ||
-            wasInEarlierPlan(task, todayDate)),
-      )
+      .filter(isSuggested)
       .sort((a, b) =>
         compareByScore(a, b, todayDate, (l, r) =>
           (l.dueTime ?? "23:59").localeCompare(r.dueTime ?? "23:59"),
@@ -305,9 +309,9 @@ export function groupDayPlan(
     outside: waiting
       .filter(
         (task) =>
-          decidedToday(task) &&
-          task.planPosition === null &&
-          isTaskScheduledForToday(task, todayDate),
+          isTaskScheduledForToday(task, todayDate) &&
+          !isInDayPlan(task, todayDate) &&
+          !isSuggested(task),
       )
       .sort((a, b) =>
         compareByScore(a, b, todayDate, (l, r) =>

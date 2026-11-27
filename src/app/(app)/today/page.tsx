@@ -589,7 +589,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
           {dayPlan.outside.length > 0 ? (
             <TaskSection
               categories={categories}
-              description="Têm prazo para hoje, mas ficaram fora do plano. Dá para trazer quando quiser."
+              description="São de hoje, mas estão fora do plano. Dá para trazer quando quiser."
               emptyMessage=""
               label="Fora do plano"
               planDate={todayDate}

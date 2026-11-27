@@ -429,6 +429,18 @@ describe("plano do dia", () => {
     ]);
   });
 
+  it("só sugere atrasadas e prazo hoje; o resto de hoje vai direto para fora do plano", () => {
+    const tasks = [
+      createTask({ id: "longa", startDate: "2026-06-08", dueDate: "2026-06-19" }),
+      createTask({ id: "sem-prazo", startDate: "2026-06-10", dueDate: null }),
+      createTask({ id: "hoje" }),
+    ];
+    const groups = groupDayPlan(tasks, today);
+
+    expect(ids(groups.suggestions)).toEqual(["hoje"]);
+    expect(ids(groups.outside).sort()).toEqual(["longa", "sem-prazo"]);
+  });
+
   it("uma futura aceita fica no plano mesmo sem ser de hoje", () => {
     const task = createTask({ dueDate: "2026-06-20", planDate: today, planPosition: 0 });
 
