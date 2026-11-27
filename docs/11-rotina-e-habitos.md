@@ -107,6 +107,13 @@ Base da decisão: Lally et al. (2009), mediana de 66 dias até a automaticidade 
 - Desfazer um cuidado (ou trocá-lo por folga) devolve o bônus, como devolve as Folhinhas do cuidado. Editar ou apagar a rotina nunca tira um bônus já ganho.
 - Um hábito está em no máximo uma rotina; apagar a rotina deixa os hábitos soltos.
 
+### 3.10 Rotina inicial "Organizar meu dia"
+
+- Toda conta nasce com a rotina **Organizar meu dia** (âncora "ao começar o dia"), com um passo: o hábito **Montar o Plano do dia**, de segunda a sexta, de manhã. É um bom hábito para todo mundo e mostra a quem chega que rotinas existem.
+- Contas criadas antes ganharam a mesma rotina pela migração `0007_starter_routine` (quem já tinha uma rotina com esse nome ficou como estava).
+- É uma rotina comum: dá para editar, apagar ou adicionar passos. Como as outras, entra na conta do bônus de rotinas (3.9) nos dias úteis.
+- Código: `backend/app/services/starter_routine.py`, chamado no cadastro por e-mail e pelo Google.
+
 ## 4. Pendente
 
 - Limiares exatos para 2, 4, 5 e 6 dias por semana.

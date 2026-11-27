@@ -116,6 +116,12 @@ def _signup_and_login(c: TestClient, prefix: str) -> None:
     assert r.status_code == 201, r.text
     r = c.post("/auth/login", json={"email": email, "password": "secret123"})
     assert r.status_code == 200, r.text
+    # Toda conta nasce com a rotina "Organizar meu dia" (test_starter_routine.py).
+    # Os demais testes partem de uma conta vazia de hábitos e rotinas.
+    for routine in c.get("/routines").json():
+        assert c.delete(f"/routines/{routine['id']}").status_code == 204
+    for habit in c.get("/habits").json():
+        assert c.delete(f"/habits/{habit['id']}").status_code == 204
 
 
 @pytest.fixture()

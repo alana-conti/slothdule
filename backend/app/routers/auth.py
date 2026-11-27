@@ -22,6 +22,7 @@ from app.security import (
     new_refresh_token,
     verify_password,
 )
+from app.services.starter_routine import add_starter_routine
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -73,6 +74,7 @@ def _resolve_google_user(
     db.flush()
     db.add(models.Profile(id=user.id))
     db.add(models.OAuthAccount(user_id=user.id, provider="google", provider_user_id=sub))
+    add_starter_routine(db, user.id)
     db.flush()
     return user
 
@@ -104,6 +106,7 @@ def signup(payload: schemas.SignupIn, response: Response, db: Session = Depends(
     db.add(user)
     db.flush()
     db.add(models.Profile(id=user.id))
+    add_starter_routine(db, user.id)
     try:
         db.commit()
     except IntegrityError:

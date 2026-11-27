@@ -146,12 +146,15 @@ test.describe("rotina e hábitos", () => {
     const routineName = `${E2E_TITLE_PREFIX} Manhã ${stamp}`;
 
     // O bônus pede todas as rotinas do dia completas: rotinas e2e que sobraram
-    // de uma execução interrompida atrapalhariam.
+    // de uma execução interrompida, e a rotina inicial que toda conta ganha
+    // ("Organizar meu dia"), atrapalhariam.
     const stale = (await (await page.request.get(`${API_URL}/routines`)).json()) as Array<{
       id: string;
       name: string;
     }>;
-    for (const routine of stale.filter((item) => item.name.startsWith(E2E_TITLE_PREFIX))) {
+    for (const routine of stale.filter(
+      (item) => item.name.startsWith(E2E_TITLE_PREFIX) || item.name === "Organizar meu dia",
+    )) {
       await page.request.delete(`${API_URL}/routines/${routine.id}`);
     }
 

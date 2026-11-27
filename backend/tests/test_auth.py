@@ -266,6 +266,8 @@ def test_google_callback_creates_user_and_logs_in(client, google_env, engine):
     assert body["display_name"] == "Google User"
     assert body["avatar_url"].startswith("https://lh3.googleusercontent.com/")
     assert body["google_linked"] is True
+    # Conta nova pelo Google também ganha a rotina inicial.
+    assert [r["name"] for r in client.get("/routines").json()] == ["Organizar meu dia"]
 
     TestingSession = sessionmaker(bind=engine)
     with TestingSession() as session:
