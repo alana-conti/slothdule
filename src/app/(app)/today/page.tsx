@@ -4,15 +4,22 @@ import { redirect } from "next/navigation";
 import { getHabitToday, listHabits, listRoutines } from "@/features/habits/data";
 import { TodayRoutineCard } from "@/features/habits/today-routine-card";
 import { listCategories, listTasks } from "@/features/tasks/data";
+import { AcceptAllButton, DayPlanList } from "@/features/tasks/day-plan-list";
 import { TaskRow } from "@/features/tasks/task-row";
 import {
   FOCUS_LIMIT,
   formatEstimatedMinutes,
   getDailyEstimatedMinutes,
   getTodayDateKey,
+  groupDayPlan,
   groupTasksForToday,
+  headStartReason,
+  isInDayPlan,
   isTaskOverdue,
+  isTaskScheduledForToday,
+  wasInEarlierPlan,
 } from "@/features/tasks/today";
+import type { DayPlanGroups } from "@/features/tasks/today";
 import { calculatePriorityScore, getEffectivePriority } from "@/lib/priority";
 import { getCurrentUser } from "@/lib/api/server";
 import type { Category, Task } from "@/types/tasks";
@@ -41,6 +48,8 @@ type TaskSectionProps = {
   focusTasks?: Task[];
   id?: string;
   label: string;
+  /** Dia do plano: mostra "Pôr no plano" em cada linha ("Também para hoje"). */
+  planDate?: string;
   tasks: Task[];
   title: string;
   todayDate: string;
@@ -229,6 +238,7 @@ function TaskSection({
   focusTasks,
   id,
   label,
+  planDate,
   tasks,
   title,
   todayDate,
@@ -268,6 +278,7 @@ function TaskSection({
               categories={categories}
               isOverdue={isTaskOverdue(task, todayDate)}
               key={task.id}
+              plan={planDate ? { date: planDate, mode: "out" } : undefined}
               priority={calculatePriorityScore(task, todayDate)}
               task={task}
             />
@@ -286,6 +297,153 @@ function TaskSection({
           todayDate={todayDate}
         />
       ) : null}
+    </section>
+  );
+}
+
+type DayPlanSectionProps = {
+  categories: Category[];
+  completedTodayTasks: Task[];
+  focusTasks: Task[];
+  groups: DayPlanGroups;
+  todayDate: string;
+};
+
+/**
+ * A seção principal do dia. No começo do dia, o que é de hoje chega como
+ * sugestão (✓ põe no plano, ✕ deixa em "Também para hoje"), mais uma
+ * antecipação em dourado. O que entra no plano é ordenado arrastando.
+ */
+function DayPlanSection({
+  categories,
+  completedTodayTasks,
+  focusTasks,
+  groups,
+  todayDate,
+}: DayPlanSectionProps) {
+  const { headStart, plan, suggestions } = groups;
+  const hasSuggestions = suggestions.length > 0 || headStart !== null;
+  const isEmpty = plan.length === 0 && !hasSuggestions && focusTasks.length === 0;
+
+  return (
+    <section
+      className="scroll-mt-6 rounded-card border border-sloth-moss/35 bg-sloth-card/55 p-5 sm:p-7"
+      id="hoje"
+    >
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.18em] text-sloth-moss uppercase">
+            Agora
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-sloth-ink">
+            Plano do dia
+          </h2>
+          <p className="mt-1 text-sm text-sloth-muted">
+            {plan.length === 0 && hasSuggestions
+              ? "O que entra hoje? Aceite ou recuse as sugestões e depois arraste para ordenar."
+              : "Sua ordem para hoje. Arraste uma tarefa para mudar (no celular, segure antes de arrastar)."}
+          </p>
+        </div>
+        <span className="w-fit rounded-full bg-sloth-beige px-3 py-1 text-sm font-semibold text-sloth-forest">
+          {plan.length + focusTasks.length}
+          <span className="sr-only"> no plano</span>
+        </span>
+      </div>
+
+      <FocusArea
+        categories={categories}
+        tasks={focusTasks}
+        todayDate={todayDate}
+      />
+
+      {plan.length > 0 ? (
+        <DayPlanList
+          categories={categories}
+          items={plan.map((task) => {
+            const isHeadStart = !isTaskScheduledForToday(task, todayDate);
+
+            return {
+              isOverdue: isTaskOverdue(task, todayDate),
+              plan: {
+                date: todayDate,
+                headStart: isHeadStart,
+                mode: "in",
+                tag: isHeadStart ? "Adiantada" : undefined,
+              },
+              priority: calculatePriorityScore(task, todayDate),
+              task,
+            };
+          })}
+          planDate={todayDate}
+        />
+      ) : null}
+
+      {hasSuggestions ? (
+        <div
+          aria-label="Sugestões para o plano"
+          className={`grid gap-2 ${plan.length > 0 ? "mt-5" : ""}`}
+          role="region"
+        >
+          <div className="flex items-center justify-between gap-3 px-1">
+            <p className="text-xs font-semibold tracking-[0.14em] text-sloth-moss uppercase">
+              Sugestões para o plano
+            </p>
+            {suggestions.length > 1 ? (
+              <AcceptAllButton
+                planDate={todayDate}
+                planIds={plan.map((task) => task.id)}
+                suggestionIds={suggestions.map((task) => task.id)}
+              />
+            ) : null}
+          </div>
+          {/* A antecipação vem primeiro: com muitas sugestões, não se perde no fim. */}
+          {headStart ? (
+            <TaskRow
+              categories={categories}
+              key={headStart.id}
+              plan={{
+                date: todayDate,
+                headStart: true,
+                mode: "suggested",
+                reason: headStartReason(headStart, todayDate),
+                tag: "Adiantar",
+              }}
+              priority={calculatePriorityScore(headStart, todayDate)}
+              task={headStart}
+            />
+          ) : null}
+          {suggestions.map((task) => (
+            <TaskRow
+              categories={categories}
+              isOverdue={isTaskOverdue(task, todayDate)}
+              key={task.id}
+              plan={{
+                date: todayDate,
+                mode: "suggested",
+                tag: wasInEarlierPlan(task, todayDate)
+                  ? "Estava no plano"
+                  : undefined,
+              }}
+              priority={calculatePriorityScore(task, todayDate)}
+              task={task}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {isEmpty ? (
+        <p className="rounded-2xl border border-dashed border-sloth-border bg-sloth-card px-5 py-7 text-center text-sm text-sloth-muted">
+          {completedTodayTasks.length > 0
+            ? "Tudo o que estava no plano está feito."
+            : "Nada previsto para hoje. Dia leve."}
+        </p>
+      ) : null}
+
+      <CompletedTodayArea
+        categories={categories}
+        tasks={completedTodayTasks}
+        todayDate={todayDate}
+      />
     </section>
   );
 }
@@ -317,8 +475,14 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
   // Quem está em andamento vai para a área "Em foco agora" dentro de Hoje e sai
   // da lista da sua data.
   const notInProgress = (task: Task) => task.status !== "in_progress";
-  const todayRest = groups.today.filter(notInProgress);
-  const upcomingRest = groups.upcoming.filter(notInProgress);
+  const dayPlan = groupDayPlan(tasks, todayDate);
+  // O que já está no plano (adiantado) ou sugerido para adiantar não repete abaixo.
+  const upcomingRest = groups.upcoming.filter(
+    (task) =>
+      notInProgress(task) &&
+      !isInDayPlan(task, todayDate) &&
+      task.id !== dayPlan.headStart?.id,
+  );
 
   return (
     <main className="min-h-screen px-5 py-8 sm:px-8 sm:py-12">
@@ -414,22 +578,26 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
         ) : null}
 
         <div className="mt-8 grid gap-7">
-          <TaskSection
+          <DayPlanSection
             categories={categories}
             completedTodayTasks={groups.completedToday}
-            description="Tarefas previstas para hoje, mais as que ficaram de antes e já subiram na fila."
-            emptyMessage={
-              groups.completedToday.length > 0
-                ? "Tudo o que estava previsto para hoje está feito."
-                : "Nenhuma tarefa prevista para hoje."
-            }
             focusTasks={groups.inProgress}
-            id="hoje"
-            label="Agora"
-            tasks={todayRest}
-            title="Tarefas de hoje"
+            groups={dayPlan}
             todayDate={todayDate}
           />
+
+          {dayPlan.outside.length > 0 ? (
+            <TaskSection
+              categories={categories}
+              description="Têm prazo para hoje, mas ficaram fora do plano. Dá para trazer quando quiser."
+              emptyMessage=""
+              label="Fora do plano"
+              planDate={todayDate}
+              tasks={dayPlan.outside}
+              title="Também para hoje"
+              todayDate={todayDate}
+            />
+          ) : null}
 
           <TaskSection
             categories={categories}

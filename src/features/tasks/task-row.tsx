@@ -18,6 +18,7 @@ import { FocusTaskButton } from "@/features/focus/focus-task-button";
 import {
     archiveTaskAction,
     changeTaskStatusAction,
+    decideDayPlanAction,
     removeTaskAction,
     updateTaskAction,
     updateTaskFieldsAction,
@@ -41,14 +42,30 @@ import { playCompletionSound, playDayCompleteSound } from "@/lib/audio/sounds";
 import { taskPriorities } from "@/types/tasks";
 import type { Category, Task, TaskStatus } from "@/types/tasks";
 
+/** Papel da linha no Plano do dia (tela Hoje). */
+export type TaskRowPlan = {
+    /** Dia do plano (com a virada às 4h). */
+    date: string;
+    /** Sugestão com ✓/✕, já no plano ou fora dele ("Também para hoje"). */
+    mode: "suggested" | "in" | "out";
+    /** Antecipação de uma tarefa futura: verde com dourado. */
+    headStart?: boolean;
+    reason?: string;
+    tag?: string;
+};
+
 type TaskRowProps = {
     categories: Category[];
     /** Mostra o botão "Focar" (Modo foco) enquanto a tarefa está em andamento. */
     focusable?: boolean;
     isOverdue?: boolean;
+    plan?: TaskRowPlan;
     priority: PriorityScoreResult;
     task: Task;
 };
+
+const planButtonClasses =
+    "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border text-sm transition disabled:cursor-wait disabled:opacity-60";
 
 const statusLabels: Record<TaskStatus, string> = {
     todo: "A fazer",
@@ -113,6 +130,7 @@ export function TaskRow({
     categories,
     focusable = false,
     isOverdue = false,
+    plan,
     priority,
     task,
 }: TaskRowProps) {
@@ -410,6 +428,24 @@ export function TaskRow({
         });
     }
 
+    function decidePlan(inPlan: boolean) {
+        if (!plan) {
+            return;
+        }
+
+        startTransition(async () => {
+            const result = await decideDayPlanAction(task.id, plan.date, inPlan);
+
+            if (!result.ok) {
+                toast({
+                    description: result.error,
+                    title: "Não foi possível mudar o plano",
+                    tone: "error",
+                });
+            }
+        });
+    }
+
     function remove() {
         startTransition(async () => {
             const result = await removeTaskAction(task.id);
@@ -462,9 +498,11 @@ export function TaskRow({
         <article
             aria-busy={pending}
             className={`rounded-2xl border transition ${
-                isOverdue
-                    ? "border-sloth-amber/40 bg-sloth-amber/5"
-                    : "border-sloth-border bg-sloth-card"
+                plan?.headStart && plan.mode === "suggested"
+                    ? "border-sloth-gold bg-sloth-gold/15"
+                    : isOverdue
+                      ? "border-sloth-amber/40 bg-sloth-amber/5"
+                      : "border-sloth-border bg-sloth-card"
             } ${isFinished ? "opacity-80" : ""}`}
         >
             <div
@@ -574,7 +612,27 @@ export function TaskRow({
                                 Ficou de antes
                             </span>
                         ) : null}
+                        {plan?.tag ? (
+                            <span
+                                className={`rounded-full px-2 py-0.5 font-medium ${
+                                    plan.headStart
+                                        ? "bg-sloth-gold/25 text-sloth-ink"
+                                        : "bg-sloth-moss/10 text-sloth-forest"
+                                }`}
+                            >
+                                {plan.headStart ? (
+                                    <span aria-hidden="true">🍃 </span>
+                                ) : null}
+                                {plan.tag}
+                            </span>
+                        ) : null}
                     </div>
+
+                    {plan?.reason ? (
+                        <p className="mt-1 text-xs text-sloth-muted">
+                            {plan.reason}
+                        </p>
+                    ) : null}
 
                     {editingField ? (
                         <TaskFieldEditor
@@ -595,6 +653,40 @@ export function TaskRow({
                         </p>
                     ) : null}
                 </div>
+
+                {plan?.mode === "suggested" ? (
+                    <>
+                        <button
+                            aria-label="Pôr no plano"
+                            className={`${planButtonClasses} border-sloth-moss bg-sloth-moss text-white hover:bg-sloth-forest`}
+                            disabled={pending}
+                            onClick={() => decidePlan(true)}
+                            title="Pôr no plano"
+                            type="button"
+                        >
+                            <span aria-hidden="true">✓</span>
+                        </button>
+                        <button
+                            aria-label="Agora não"
+                            className={`${planButtonClasses} border-sloth-border text-sloth-muted hover:bg-sloth-beige`}
+                            disabled={pending}
+                            onClick={() => decidePlan(false)}
+                            title="Agora não"
+                            type="button"
+                        >
+                            <span aria-hidden="true">✕</span>
+                        </button>
+                    </>
+                ) : plan?.mode === "out" ? (
+                    <button
+                        className="inline-flex min-h-9 shrink-0 cursor-pointer items-center rounded-full border border-sloth-moss/40 px-3 text-xs font-semibold text-sloth-forest transition hover:bg-sloth-moss/10 disabled:cursor-wait disabled:opacity-60"
+                        disabled={pending}
+                        onClick={() => decidePlan(true)}
+                        type="button"
+                    >
+                        Pôr no plano
+                    </button>
+                ) : null}
 
                 {focusable && status === "in_progress" ? (
                     <FocusTaskButton task={{ id: task.id, title: fields.title }} />
@@ -742,6 +834,17 @@ export function TaskRow({
                         >
                             Editar
                         </button>
+
+                        {plan?.mode === "in" ? (
+                            <button
+                                className={`${actionButtonClasses} text-sloth-muted`}
+                                disabled={pending}
+                                onClick={() => decidePlan(false)}
+                                type="button"
+                            >
+                                Tirar do plano
+                            </button>
+                        ) : null}
 
                         {status !== "archived" ? (
                             <button

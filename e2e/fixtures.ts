@@ -16,9 +16,12 @@ export function uniqueTitle(base: string) {
   return `${E2E_TITLE_PREFIX} ${base} ${Date.now().toString(36)}`;
 }
 
-/** Mesma regra do app (src/features/tasks/today.ts): data de hoje em pt-BR. */
+/**
+ * Mesma regra do app (src/features/tasks/today.ts): data de hoje em São Paulo,
+ * com o dia virando às 4h.
+ */
 export function todayKey(offsetDays = 0) {
-  const date = new Date();
+  const date = new Date(Date.now() - 4 * 60 * 60 * 1000);
   date.setUTCDate(date.getUTCDate() + offsetDays);
   const parts = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",

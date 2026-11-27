@@ -164,3 +164,8 @@ Visual sugerido:
 - Item ativo = card branco quente com borda bege e texto verde floresta.
 - Novas telas entram em `groups` em `src/components/sloth/app-navigation.tsx`; o menu vive no layout `(app)`, não nas páginas.
 - O pop-up de nova tarefa abre por eventos (`src/features/tasks/new-task-events.ts`) ou pela tecla N.
+
+## 12. Antecipação (Plano do dia)
+
+- A sugestão de adiantar uma tarefa futura é a única linha em **verde com dourado**: borda e fundo em dourado folha (`sloth-gold`), etiqueta "🍃 Adiantar" e o ✓ verde musgo. No plano, a tarefa aceita mantém só a etiqueta dourada "Adiantada".
+- O dourado não é alerta nem prioridade: marca "um passo à frente", sempre com o motivo em texto.

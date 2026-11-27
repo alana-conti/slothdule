@@ -5,8 +5,11 @@ import {
   getTaskDailyEstimatedMinutes,
   getTaskCompletedDateKey,
   getTaskDurationDays,
+  groupDayPlan,
   groupTasksForToday,
+  headStartReason,
   isDayComplete,
+  pickHeadStart,
 } from "./today";
 import type { Task } from "../../types/tasks";
 
@@ -27,6 +30,8 @@ function createTask(overrides: Partial<Task> = {}): Task {
     completedAt: null,
     leafAwardedAt: null,
     pauseReason: null,
+    planDate: null,
+    planPosition: null,
     clientId: null,
     projectId: null,
     createdAt: "2026-06-10T12:00:00Z",
@@ -179,23 +184,23 @@ describe("concluídas hoje", () => {
     expect(groups.completed.map((task) => task.id)).toEqual(["yesterday"]);
   });
 
-  it("usa o fuso de São Paulo para decidir o dia da conclusão", () => {
+  it("usa o fuso de São Paulo e a virada às 4h para decidir o dia da conclusão", () => {
     // 01:30 UTC do dia 13 ainda é 22:30 do dia 12 em São Paulo.
     const lateNight = createTask({
       status: "done",
       completedAt: "2026-06-13T01:30:00Z",
     });
-    // 03:30 UTC do dia 12 ainda é 00:30 do dia 12 em São Paulo.
+    // 07:30 UTC do dia 12 é 04:30 do dia 12 em São Paulo: o dia já virou.
     const earlyMorning = createTask({
       id: "early",
       status: "done",
-      completedAt: "2026-06-12T03:30:00Z",
+      completedAt: "2026-06-12T07:30:00Z",
     });
-    // 02:30 UTC do dia 12 é 23:30 do dia 11 em São Paulo.
+    // 05:30 UTC do dia 12 é 02:30 do dia 12 em São Paulo: madrugada ainda é o dia 11.
     const dayBefore = createTask({
       id: "day-before",
       status: "done",
-      completedAt: "2026-06-12T02:30:00Z",
+      completedAt: "2026-06-12T05:30:00Z",
     });
 
     expect(getTaskCompletedDateKey(lateNight)).toBe("2026-06-12");
@@ -375,5 +380,143 @@ describe("tarefas sem data (Sem pressa)", () => {
     ];
 
     expect(isDayComplete(tasks, "a", today)).toBe(false);
+  });
+});
+
+describe("plano do dia", () => {
+  // Sexta-feira, 12 de junho de 2026.
+  const today = "2026-06-12";
+  const ids = (tasks: Task[]) => tasks.map((task) => task.id);
+
+  it("sem decisão hoje, o que é de hoje vira sugestão", () => {
+    const dueToday = createTask({ id: "hoje" });
+    const overdue = createTask({ id: "atrasada", dueDate: "2026-06-10" });
+    const future = createTask({ id: "futura", dueDate: "2026-06-30" });
+    const groups = groupDayPlan([dueToday, overdue, future], today);
+
+    expect(ids(groups.suggestions).sort()).toEqual(["atrasada", "hoje"]);
+    expect(groups.plan).toEqual([]);
+    expect(groups.outside).toEqual([]);
+  });
+
+  it("aceitas entram no plano na ordem da pessoa; recusadas ficam fora", () => {
+    const tasks = [
+      createTask({ id: "b", planDate: today, planPosition: 1 }),
+      createTask({ id: "a", planDate: today, planPosition: 0 }),
+      createTask({ id: "recusada", planDate: today, planPosition: null }),
+    ];
+    const groups = groupDayPlan(tasks, today);
+
+    expect(ids(groups.plan)).toEqual(["a", "b"]);
+    expect(ids(groups.outside)).toEqual(["recusada"]);
+    expect(groups.suggestions).toEqual([]);
+  });
+
+  it("decisões de ontem não valem hoje; o plano de ontem volta como sugestão", () => {
+    const tasks = [
+      createTask({ id: "recusada-ontem", planDate: "2026-06-11", planPosition: null }),
+      createTask({
+        id: "plano-ontem",
+        dueDate: "2026-06-20",
+        planDate: "2026-06-11",
+        planPosition: 0,
+      }),
+    ];
+
+    expect(ids(groupDayPlan(tasks, today).suggestions).sort()).toEqual([
+      "plano-ontem",
+      "recusada-ontem",
+    ]);
+  });
+
+  it("uma futura aceita fica no plano mesmo sem ser de hoje", () => {
+    const task = createTask({ dueDate: "2026-06-20", planDate: today, planPosition: 0 });
+
+    expect(groupDayPlan([task], today).plan).toEqual([task]);
+  });
+
+  it("em andamento e concluídas ficam fora das listas do plano", () => {
+    const tasks = [
+      createTask({ id: "foco", status: "in_progress", planDate: today, planPosition: 0 }),
+      createTask({ id: "feita", status: "done" }),
+    ];
+    const groups = groupDayPlan(tasks, today);
+
+    expect([...groups.plan, ...groups.suggestions, ...groups.outside]).toEqual([]);
+  });
+});
+
+describe("antecipação do dia", () => {
+  const today = "2026-06-12";
+  const old = "2026-05-01T12:00:00Z";
+
+  it("prefere o prazo mais perto e, no empate, a tarefa mais longa", () => {
+    const tasks = [
+      createTask({ id: "longe", dueDate: "2026-06-20", createdAt: old }),
+      createTask({ id: "curta", dueDate: "2026-06-15", estimatedMinutes: 30, createdAt: old }),
+      createTask({ id: "longa", dueDate: "2026-06-15", estimatedMinutes: 180, createdAt: old }),
+      createTask({ id: "sem-data", dueDate: null, createdAt: old }),
+    ];
+
+    expect(pickHeadStart(tasks, today)?.id).toBe("longa");
+  });
+
+  it("sem prazo próximo, sugere a mais antiga de Sem pressa", () => {
+    const tasks = [
+      createTask({ id: "fora-da-janela", dueDate: "2026-06-27", createdAt: old }),
+      createTask({ id: "nova", dueDate: null, createdAt: "2026-06-01T12:00:00Z" }),
+      createTask({ id: "antiga", dueDate: null, createdAt: old }),
+    ];
+
+    expect(pickHeadStart(tasks, today)?.id).toBe("antiga");
+  });
+
+  it("ignora o que já é de hoje, não está a fazer ou foi criado hoje", () => {
+    const tasks = [
+      createTask({ id: "de-hoje", createdAt: old }),
+      createTask({ id: "aguardando", dueDate: "2026-06-14", status: "waiting", createdAt: old }),
+      createTask({ id: "criada-hoje", dueDate: "2026-06-14", createdAt: "2026-06-12T12:00:00Z" }),
+    ];
+
+    expect(pickHeadStart(tasks, today)).toBeNull();
+  });
+
+  it("recusada descansa 3 dias e depois volta", () => {
+    const declined = (planDate: string) =>
+      createTask({ dueDate: "2026-06-20", createdAt: old, planDate, planPosition: null });
+
+    expect(pickHeadStart([declined("2026-06-10")], today)).toBeNull();
+    expect(pickHeadStart([declined("2026-06-09")], today)).not.toBeNull();
+  });
+
+  it("é uma por dia: depois de aceitar ou recusar uma hoje, não sugere outra", () => {
+    const next = createTask({ id: "proxima", dueDate: "2026-06-16", createdAt: old });
+
+    for (const planPosition of [0, null]) {
+      const decided = createTask({
+        id: "decidida",
+        dueDate: "2026-06-15",
+        createdAt: old,
+        planDate: today,
+        planPosition,
+      });
+
+      expect(pickHeadStart([decided, next], today)).toBeNull();
+    }
+  });
+
+  it("explica o motivo sem falar em horas", () => {
+    expect(headStartReason(createTask({ dueDate: "2026-06-13" }), today)).toBe(
+      "Vence amanhã. Começar hoje tira o peso de amanhã.",
+    );
+    expect(headStartReason(createTask({ dueDate: "2026-06-16" }), today)).toBe(
+      "Vence terça. Começar hoje deixa a semana mais leve.",
+    );
+    expect(headStartReason(createTask({ dueDate: "2026-06-22" }), today)).toBe(
+      "Vence dia 22. Começar cedo evita a correria no fim.",
+    );
+    expect(
+      headStartReason(createTask({ dueDate: null, createdAt: old }), today),
+    ).toBe("Em Sem pressa há 6 semanas. Hoje pode ser o dia.");
   });
 });

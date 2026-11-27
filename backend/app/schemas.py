@@ -122,6 +122,15 @@ class TaskIn(BaseModel):
     pause_reason: str | None = Field(default=None, max_length=500)
 
 
+class DayPlanIn(BaseModel):
+    # A ordem da lista é a ordem do plano.
+    task_ids: list[UUID] = Field(max_length=500)
+
+
+class PlanDecisionIn(BaseModel):
+    in_plan: bool
+
+
 class TaskStatusIn(BaseModel):
     status: TaskStatus
     pause_reason: str | None = Field(default=None, max_length=500)
@@ -145,6 +154,8 @@ class TaskOut(BaseModel):
     completed_at: datetime | None = None
     leaf_awarded_at: datetime | None = None
     pause_reason: str | None = None
+    plan_date: date | None = None
+    plan_position: int | None = None
     created_at: datetime
     updated_at: datetime
 

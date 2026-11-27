@@ -7,6 +7,7 @@ import {
   archiveTask,
   createRewardItem,
   createTask,
+  decideDayPlanTask,
   deleteTask,
   getTask,
   listCategories,
@@ -14,6 +15,7 @@ import {
   markRewardRedemptionDelivered,
   updateTask,
   redeemReward,
+  setDayPlan,
 } from "@/features/tasks/data";
 import { isDayComplete } from "@/features/tasks/today";
 import {
@@ -519,4 +521,51 @@ export async function markRewardRedemptionDeliveredAction(formData: FormData) {
 
   revalidatePath("/rewards");
   redirectWithMessage("message", "Resgate marcado como finalizado.", "/rewards");
+}
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Aceita ("Pôr no plano") ou recusa ("Agora não") uma tarefa no plano do dia. */
+export async function decideDayPlanAction(
+  taskId: string,
+  planDate: string,
+  inPlan: boolean,
+): Promise<SimpleActionResult> {
+  try {
+    if (!DATE_KEY.test(planDate)) {
+      throw new Error("Dia do plano inválido.");
+    }
+
+    await decideDayPlanTask(planDate, taskId, inPlan);
+    revalidatePath("/", "layout");
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Não foi possível mudar o plano do dia."),
+    };
+  }
+}
+
+/** Salva o plano do dia na ordem dada (arrastar, "Aceitar todas"). */
+export async function saveDayPlanAction(
+  planDate: string,
+  taskIds: string[],
+): Promise<SimpleActionResult> {
+  try {
+    if (!DATE_KEY.test(planDate)) {
+      throw new Error("Dia do plano inválido.");
+    }
+
+    await setDayPlan(planDate, taskIds);
+    revalidatePath("/", "layout");
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: errorMessage(error, "Não foi possível salvar o plano do dia."),
+    };
+  }
 }

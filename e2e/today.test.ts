@@ -14,17 +14,17 @@ test.describe("tela Hoje", () => {
     await expect(page.getByRole("heading", { name: "Uma coisa de cada vez" })).toBeVisible();
   });
 
-  test("cria tarefa manual e exibe em Tarefas de hoje", async ({ page }) => {
+  test("cria tarefa manual e chega como sugestão no Plano do dia", async ({ page }) => {
     const title = uniqueTitle("Tarefa manual");
     await createTaskByForm(page, { title, dueDate: todayKey() });
 
     const todaySection = page
       .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "Tarefas de hoje" }) });
+      .filter({ has: page.getByRole("heading", { name: "Plano do dia" }) });
     await expect(todaySection).toContainText(title);
   });
 
-  test("tarefa atrasada aparece em Tarefas de hoje, marcada com calma", async ({
+  test("tarefa atrasada aparece no Plano do dia, marcada com calma", async ({
     page,
   }) => {
     const title = uniqueTitle("Tarefa atrasada");
@@ -36,7 +36,7 @@ test.describe("tela Hoje", () => {
     await expect(
       page
         .locator("section")
-        .filter({ has: page.getByRole("heading", { name: "Tarefas de hoje" }) }),
+        .filter({ has: page.getByRole("heading", { name: "Plano do dia" }) }),
     ).toContainText(title);
     await expect(
       page.getByRole("heading", { name: "Tarefas atrasadas" }),

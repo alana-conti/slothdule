@@ -41,6 +41,12 @@ export type Task = {
   leafAwardedAt: string | null;
   /** Recado de quando a tarefa foi pausada (só enquanto está aguardando). */
   pauseReason: string | null;
+  /**
+   * Plano do dia: no plano de `planDate` na posição `planPosition`. Posição
+   * `null` com data = recusada naquele dia. Outra data = ainda não decidida.
+   */
+  planDate: string | null;
+  planPosition: number | null;
   clientId: string | null;
   projectId: string | null;
   createdAt: string;

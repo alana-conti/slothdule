@@ -70,14 +70,14 @@ test.describe("ciclo de vida da tarefa", () => {
     await expect(card.getByLabel("Status da tarefa")).toHaveValue("todo");
   });
 
-  test("em andamento vai para a área Em foco agora dentro de Hoje; pausar vai para aguardando e retomar volta", async ({
+  test("em andamento vai para a área Em foco agora dentro do Plano do dia; pausar vai para aguardando e retomar volta", async ({
     page,
   }) => {
     const title = uniqueTitle("Foco e pausa");
     await createTaskByForm(page, { title, dueDate: todayKey() });
 
     const hoje = page.locator("section").filter({
-      has: page.getByRole("heading", { name: "Tarefas de hoje", exact: true }),
+      has: page.getByRole("heading", { name: "Plano do dia", exact: true }),
     });
     const focus = page.getByRole("region", { name: "Em foco agora" });
     await expect(focus.filter({ hasText: title })).toHaveCount(0);
@@ -86,7 +86,7 @@ test.describe("ciclo de vida da tarefa", () => {
       .getByRole("button", { name: "Iniciar tarefa", exact: true })
       .click();
 
-    // A área de foco fica dentro da seção Hoje, não é outra seção.
+    // A área de foco fica dentro do Plano do dia, não é outra seção.
     await expect(hoje.getByRole("region", { name: "Em foco agora" })).toContainText(
       title,
     );
@@ -211,7 +211,7 @@ test.describe("ciclo de vida da tarefa", () => {
     await expect(card.getByLabel("Status da tarefa")).toHaveValue("todo");
     await expect(
       page.locator("section").filter({
-        has: page.getByRole("heading", { name: "Tarefas de hoje" }),
+        has: page.getByRole("heading", { name: "Plano do dia" }),
       }),
     ).toContainText(title);
   });

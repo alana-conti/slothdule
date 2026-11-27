@@ -295,6 +295,10 @@ class Task(Base):
     # Recado opcional de quando a tarefa foi pausada (status `waiting`), p.ex.
     # "esperando o retorno da Ana". Só faz sentido enquanto está aguardando.
     pause_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Plano do dia: no plano de `plan_date` na posição `plan_position`; posição
+    # vazia = recusada naquele dia. Outra data = ainda não decidida hoje.
+    plan_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    plan_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=_now(), nullable=False
     )
@@ -313,6 +317,7 @@ class Task(Base):
         ),
         Index("tasks_user_idx", "user_id"),
         Index("tasks_user_due_date_idx", "user_id", "due_date"),
+        Index("tasks_user_plan_date_idx", "user_id", "plan_date"),
         Index("tasks_user_status_idx", "user_id", "status"),
         Index("tasks_user_priority_idx", "user_id", "priority"),
         Index("tasks_user_category_idx", "user_id", "category_id"),

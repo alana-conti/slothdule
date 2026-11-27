@@ -7,9 +7,9 @@ Usuário abre o Slothdule
 ↓
 Tela Hoje é exibida
 ↓
-Usuário vê "Em foco agora" (o que já está em andamento, de qualquer data), tarefas de hoje (as atrasadas entram aqui, marcadas só com "Ficou de antes"; por dentro a prioridade conta um nível acima para ordenar a lista, sem alterar o que foi salvo e sem mostrar isso na etiqueta; o resumo do topo diz quantas ficaram de dias anteriores), e a carga estimada
+Usuário vê o resumo, a Rotina de hoje e o Plano do dia (fluxo 14): "Em foco agora", o plano em ordem e, no começo do dia, as sugestões do que é de hoje (as atrasadas entram aqui, marcadas só com "Ficou de antes"; por dentro a prioridade conta um nível acima para ordenar, sem alterar o que foi salvo e sem mostrar isso na etiqueta)
 ↓
-Usuário identifica a tarefa mais urgente
+Usuário compõe o plano: aceita ou recusa as sugestões e arrasta para ordenar
 ↓
 Usuário inicia ou edita tarefa
 ```
@@ -27,7 +27,7 @@ O usuário deve entender em menos de 30 segundos:
 
 Cada tarefa é uma linha, não um card grande: círculo para concluir, título, prioridade, categoria, prazo e estimativa, botão ▶ para iniciar e seletor de status. Clicar no título (ou na seta) abre os detalhes na própria linha: descrição, prioridade calculada, Editar, Arquivar, Excluir e link para a tela da tarefa.
 
-- **Em foco agora:** uma área fixa no alto da seção "Tarefas de hoje", com **2 espaços** e um contador (`0/2`, `1/2`, `2/2`). Reúne o que está em andamento (de qualquer data, inclusive atrasadas); quem está em foco sai da lista abaixo. Espaços vazios aparecem como "Espaço livre", convidando a iniciar uma tarefa. O limite é um convite, não uma trava: dá para iniciar mais (`3/2` em diante), e a área muda de tom e sugere terminar ou pausar uma antes de abrir outra frente.
+- **Em foco agora:** uma área fixa no alto do "Plano do dia", com **2 espaços** e um contador (`0/2`, `1/2`, `2/2`). Reúne o que está em andamento (de qualquer data, inclusive atrasadas); quem está em foco sai da lista abaixo. Espaços vazios aparecem como "Espaço livre", convidando a iniciar uma tarefa. O limite é um convite, não uma trava: dá para iniciar mais (`3/2` em diante), e a área muda de tom e sugere terminar ou pausar uma antes de abrir outra frente.
 - **Iniciar, pausar e retomar:** o botão ▶ inicia (A fazer → Em andamento). Em uma tarefa em andamento ele vira ❚❚; ao clicar, abre um pop-up com um campo opcional "Motivo da pausa" (por exemplo, "esperando o retorno da Ana"). **Enter** pausa, com ou sem recado; Esc ou Cancelar mantém a tarefa em andamento. A tarefa vai para Aguardando e o recado aparece na linha ("Em pausa: …"). Em uma tarefa aguardando o botão volta a ▶ e retoma (Em andamento), apagando o recado. Trocar para "Aguardando" pelo seletor não pede recado.
 - Mudar o status é um clique (círculo, ▶ ou seletor), sem botão "Aplicar" e sem recarregar: a tela e o scroll ficam como estão.
 - A confirmação aparece como toast; concluir, iniciar, mudar status e arquivar oferecem **Desfazer**, que devolve o status anterior. As Folhinhas já ganhas por uma conclusão não são retiradas ao desfazer, e reconcluir a mesma tarefa não rende Folhinhas de novo.
@@ -378,4 +378,26 @@ Quando chegar a hora, o usuário dá uma data pelo selo "Sem pressa" na linha
 - **Ida e volta:** o selo de prazo da linha mostra "Sem pressa". No editor de prazo, o botão **Sem pressa** tira a data de uma tarefa que já tinha.
 - **Ordem:** da mais antiga para a mais nova.
 - **Folhinhas:** sem prazo não há bônus de "antes do prazo"; o ganho por prioridade continua igual.
-- **Próxima fase:** sugerir, em dias leves, adiantar uma tarefa futura ou de Sem pressa ("Trazer pra hoje", "Só 25 min", "Agora não"), sempre com o motivo à vista.
+- **Adiantar:** tarefas de Sem pressa também podem chegar como a antecipação do dia no Plano do dia (fluxo 14).
+
+## 14. Fluxo: Plano do dia (tela Hoje)
+
+```text
+Usuário abre a tela Hoje no começo do dia
+↓
+O Plano do dia (logo depois da Rotina de hoje) mostra as sugestões: tudo que tem prazo hoje ou ficou de antes, mais uma antecipação em dourado
+↓
+✓ põe no fim do plano; ✕ ("Agora não") deixa a tarefa com o prazo de hoje em "Também para hoje"
+↓
+Usuário arrasta as tarefas para ordenar o plano; a tela segue essa ordem o dia todo
+```
+
+- **Ordem da tela:** cabeçalho → resumo → Rotina de hoje → **Plano do dia** (Em foco agora, o plano em ordem, as sugestões e Concluídas hoje) → **Também para hoje** (só aparece se tiver algo) → Próximas tarefas.
+- **Sugestões:** sem decisão hoje, uma tarefa de hoje aparece só como sugestão, não duplicada abaixo. O que estava no plano de um dia anterior e não foi feito volta como sugestão, com a etiqueta "Estava no plano". Com mais de uma sugestão, **Aceitar todas** põe todas no fim do plano. Dá para concluir ou iniciar uma sugestão direto na linha.
+- **Antecipação do dia (verde com dourado):** sempre uma por dia, sem olhar a carga nem a estimativa (quase ninguém preenche a duração). Vem primeiro nas sugestões, com borda e etiqueta douradas ("🍃 Adiantar") e o motivo em uma frase ("Vence terça. Começar hoje deixa a semana mais leve." ou "Em Sem pressa há 3 semanas. Hoje pode ser o dia."). Escolha (`pickHeadStart` em `src/features/tasks/today.ts`): só tarefas "a fazer", fora de hoje, não criadas hoje; primeiro prazos nos próximos 14 dias (o mais perto; no empate, a mais longa), depois Sem pressa (a mais antiga). Aceita, entra no plano com a etiqueta "Adiantada" sem mudar as datas da tarefa. Recusada, descansa 3 dias. Depois de aceitar ou recusar uma, não vem outra no mesmo dia.
+- **Também para hoje:** recusadas que ainda têm prazo hoje. Cada linha tem **Pôr no plano**. Nos detalhes de uma tarefa do plano, **Tirar do plano** a manda para cá.
+- **Ordenar:** arrastando o próprio card. No mouse, o arrasto começa depois de um pequeno movimento (clicar continua abrindo, editando e marcando); no toque, segurando um instante (deslizar continua rolando a página). Campos de texto e seletores não iniciam arrasto. Pelo teclado, cada tarefa do plano tem um botão "Mover com as setas ↑ ↓" que só aparece ao receber o foco (Tab): cada seta para cima ou para baixo já move a tarefa uma posição e salva, com o foco seguindo a tarefa e aviso em português para leitor de tela. Sem número nem alça visível na linha. Biblioteca: `@dnd-kit` (a primeira dependência além de Next e React; o arrastar nativo do navegador não funciona com toque no Android e não tem teclado).
+- **O dia vira às 4h:** a madrugada ainda conta como o dia anterior, para o plano e para a tela Hoje (`getTodayDateKey`).
+- **Dados:** `tasks.plan_date` (último dia em que a pessoa decidiu sobre a tarefa) e `tasks.plan_position` (ordem no plano; vazia = recusada naquele dia). Decisão de outro dia não vale hoje, então o plano de ontem não precisa de limpeza. API: `PUT /day-plan/{dia}/tasks/{id}` (`in_plan`: aceitar põe no fim; recusar tira) e `PUT /day-plan/{dia}` (estas tarefas, nesta ordem; não tira nenhuma, para quem está em andamento não sair do plano ao reordenar).
+- **Fora por enquanto:** sugerir outra antecipação depois de responder a do dia; trazer só um pedaço (25 min) de uma tarefa grande.
+

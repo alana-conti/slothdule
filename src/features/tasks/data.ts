@@ -40,6 +40,8 @@ type TaskRow = {
   completed_at: string | null;
   leaf_awarded_at: string | null;
   pause_reason: string | null;
+  plan_date: string | null;
+  plan_position: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -89,6 +91,8 @@ function mapTask(row: TaskRow): Task {
     completedAt: row.completed_at,
     leafAwardedAt: row.leaf_awarded_at,
     pauseReason: row.pause_reason,
+    planDate: row.plan_date,
+    planPosition: row.plan_position,
     clientId: row.client_id,
     projectId: row.project_id,
     createdAt: row.created_at,
@@ -744,4 +748,24 @@ export async function deleteAttachment(attachmentId: string, taskId: string): Pr
 
     throw new Error("Não foi possível remover o anexo.");
   }
+}
+
+/** Põe estas tarefas no plano do dia, nesta ordem. Não tira nenhuma. */
+export async function setDayPlan(planDate: string, taskIds: string[]) {
+  await apiJson(`/day-plan/${encodeURIComponent(planDate)}`, {
+    body: JSON.stringify({ task_ids: taskIds }),
+    method: "PUT",
+  });
+}
+
+/** Põe a tarefa no fim do plano do dia, ou a recusa ("Agora não"). */
+export async function decideDayPlanTask(
+  planDate: string,
+  taskId: string,
+  inPlan: boolean,
+) {
+  await apiJson(
+    `/day-plan/${encodeURIComponent(planDate)}/tasks/${encodeURIComponent(taskId)}`,
+    { body: JSON.stringify({ in_plan: inPlan }), method: "PUT" },
+  );
 }
