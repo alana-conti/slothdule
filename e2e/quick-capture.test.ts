@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { E2E_TITLE_PREFIX } from "./fixtures";
+
 test.describe("captura rápida", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/today");
@@ -11,7 +13,8 @@ test.describe("captura rápida", () => {
   test("interpreta texto livre e cria a tarefa", async ({ page }) => {
     await page
       .getByLabel("Descreva a tarefa rápida")
-      .fill(`Revisar proposta da POC urgente ${Date.now().toString(36)}`);
+      // Com o prefixo [e2e], a limpeza do fim da suíte apaga a tarefa criada.
+      .fill(`${E2E_TITLE_PREFIX} Revisar proposta da POC urgente ${Date.now().toString(36)}`);
 
     // Sugestão estruturada derivada do texto
     await expect(page.locator("#suggested-title")).not.toHaveValue("");
