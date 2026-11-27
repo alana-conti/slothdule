@@ -77,8 +77,9 @@ def create_task(
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
-    if not payload.title.strip() or payload.due_date is None:
-        raise HTTPException(status_code=400, detail="Preencha título, categoria e prazo.")
+    # Prazo é opcional: tarefa sem data fica em "Sem pressa".
+    if not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Preencha título e categoria.")
     _validate_relations(db, user.id, payload)
     task = models.Task(
         user_id=user.id,

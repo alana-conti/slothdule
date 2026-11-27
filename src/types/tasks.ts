@@ -33,7 +33,8 @@ export type Task = {
   status: TaskStatus;
   priority: TaskPriority;
   startDate: string | null;
-  dueDate: string;
+  /** `null` = sem data: a tarefa fica em "Sem pressa". */
+  dueDate: string | null;
   dueTime: string | null;
   estimatedMinutes: number | null;
   completedAt: string | null;
@@ -54,7 +55,8 @@ export type TaskInput = {
   status: TaskStatus;
   priority: TaskPriority;
   startDate: string | null;
-  dueDate: string;
+  /** `null` = sem data: a tarefa fica em "Sem pressa". */
+  dueDate: string | null;
   dueTime: string | null;
   estimatedMinutes: number | null;
   /** Omitido = não mexer no recado atual; `null` = limpar. */

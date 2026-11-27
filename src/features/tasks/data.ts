@@ -83,7 +83,7 @@ function mapTask(row: TaskRow): Task {
     status: row.status,
     priority: row.priority,
     startDate: row.start_date,
-    dueDate: row.due_date || "",
+    dueDate: row.due_date,
     dueTime: row.due_time,
     estimatedMinutes: row.estimated_minutes,
     completedAt: row.completed_at,

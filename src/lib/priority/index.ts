@@ -26,7 +26,7 @@ export function raisePriority(priority: TaskPriority): TaskPriority {
 export function getEffectivePriority(task: Task, currentDateStr: string) {
   const isOpen = task.status !== "done" && task.status !== "archived";
 
-  return isOpen && task.dueDate < currentDateStr
+  return isOpen && task.dueDate !== null && task.dueDate < currentDateStr
     ? raisePriority(task.priority)
     : task.priority;
 }

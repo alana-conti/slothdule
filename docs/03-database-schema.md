@@ -155,7 +155,7 @@ Tabela principal.
 | status | task_status | padrão: todo |
 | priority | task_priority | padrão: medium |
 | start_date | date | início planejado |
-| due_date | date | prazo |
+| due_date | date | prazo; vazio = "Sem pressa" |
 | due_time | time | horário opcional |
 | estimated_minutes | integer | estimativa de esforço |
 | completed_at | timestamptz | preenchido ao concluir |

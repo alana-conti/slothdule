@@ -11,6 +11,7 @@ import {
   getDailyEstimatedMinutes,
   getTodayDateKey,
   groupTasksForToday,
+  isTaskOverdue,
 } from "@/features/tasks/today";
 import { calculatePriorityScore, getEffectivePriority } from "@/lib/priority";
 import { getCurrentUser } from "@/lib/api/server";
@@ -108,7 +109,7 @@ function FocusArea({
             categories={categories}
             focusable
             // Em foco pode vir de qualquer data: o atraso continua visível.
-            isOverdue={task.dueDate < todayDate}
+            isOverdue={isTaskOverdue(task, todayDate)}
             key={task.id}
             priority={calculatePriorityScore(task, todayDate)}
             task={task}
@@ -265,7 +266,7 @@ function TaskSection({
           {tasks.map((task) => (
             <TaskRow
               categories={categories}
-              isOverdue={task.dueDate < todayDate}
+              isOverdue={isTaskOverdue(task, todayDate)}
               key={task.id}
               priority={calculatePriorityScore(task, todayDate)}
               task={task}

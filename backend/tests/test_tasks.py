@@ -48,9 +48,10 @@ def test_create_validation(user_client):
     cat = category_id(user_client)
     base = {"category_id": cat, "title": "ok", "due_date": tomorrow()}
 
-    # Sem prazo → 400 (regra do handler, não do schema).
+    # Sem prazo é válido: a tarefa vai para "Sem pressa".
     r = user_client.post("/tasks", json={"category_id": cat, "title": "sem prazo"})
-    assert r.status_code == 400
+    assert r.status_code == 201
+    assert r.json()["due_date"] is None
 
     # Título só com espaços → 400.
     r = user_client.post("/tasks", json={**base, "title": "   "})

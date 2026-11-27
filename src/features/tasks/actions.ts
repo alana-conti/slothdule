@@ -63,13 +63,12 @@ function getPositiveInteger(formData: FormData, field: string, label: string) {
 function parseTaskInput(formData: FormData): TaskInput {
   const title = getText(formData, "title");
   const categoryId = getText(formData, "categoryId");
-  const dueDate = getText(formData, "dueDate");
   const priority = getText(formData, "priority");
   const status = getText(formData, "status") || "todo";
   const workContext = getText(formData, "workContext") || "personal";
 
-  if (!title || !categoryId || !dueDate) {
-    throw new Error("Preencha título, categoria e prazo.");
+  if (!title || !categoryId) {
+    throw new Error("Preencha título e categoria.");
   }
 
   if (!taskPriorities.includes(priority as TaskInput["priority"])) {
@@ -87,7 +86,8 @@ function parseTaskInput(formData: FormData): TaskInput {
   return {
     title,
     categoryId,
-    dueDate,
+    // Vazio = sem data ("Sem pressa").
+    dueDate: getOptionalText(formData, "dueDate"),
     priority: priority as TaskInput["priority"],
     status: status as TaskInput["status"],
     workContext: workContext as TaskInput["workContext"],
@@ -243,6 +243,7 @@ function validateFieldsPatch(patch: TaskFieldsPatch) {
 
   if (
     patch.dueDate !== undefined &&
+    patch.dueDate !== null &&
     !/^\d{4}-\d{2}-\d{2}$/.test(patch.dueDate)
   ) {
     throw new Error("Informe um prazo válido.");
@@ -287,7 +288,7 @@ export async function updateTaskFieldsAction(
       status: task.status,
       priority: patch.priority ?? task.priority,
       startDate: task.startDate,
-      dueDate: patch.dueDate ?? task.dueDate,
+      dueDate: patch.dueDate !== undefined ? patch.dueDate : task.dueDate,
       dueTime: patch.dueTime !== undefined ? patch.dueTime : task.dueTime,
       estimatedMinutes:
         patch.estimatedMinutes !== undefined

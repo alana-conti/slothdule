@@ -112,12 +112,14 @@ export function TaskForm({
         </label>
         <input
           className="min-h-11 w-full rounded-2xl border border-sloth-border bg-sloth-card px-4 outline-none focus:border-sloth-moss"
-          defaultValue={task?.dueDate}
+          defaultValue={task?.dueDate ?? ""}
           id={`due-date-${task?.id ?? "new"}`}
           name="dueDate"
-          required
           type="date"
         />
+        <p className="mt-1 text-xs text-sloth-muted">
+          Sem data? Deixe em branco e ela fica em Sem pressa.
+        </p>
       </div>
 
       <div>

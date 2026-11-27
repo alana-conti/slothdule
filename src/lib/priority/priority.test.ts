@@ -129,6 +129,8 @@ describe("calculatePriorityScore", () => {
       expect(getEffectivePriority(createTask(overdue), currentDate)).toBe("medium");
       expect(getEffectivePriority(createTask({ ...overdue, dueDate: currentDate }), currentDate)).toBe("low");
       expect(getEffectivePriority(createTask({ ...overdue, status: "done" }), currentDate)).toBe("low");
+      // Sem data nunca atrasa.
+      expect(getEffectivePriority(createTask({ ...overdue, dueDate: null }), currentDate)).toBe("low");
     });
 
     it("explica a subida de nível no score", () => {

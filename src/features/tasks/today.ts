@@ -13,6 +13,8 @@ export type TodayTaskGroups = {
   overdue: Task[];
   today: Task[];
   upcoming: Task[];
+  /** Sem data e sem início marcado: ficam em "Sem pressa", fora de Hoje. */
+  someday: Task[];
   /** Concluídas hoje, da mais recente para a mais antiga. */
   completedToday: Task[];
   /** Concluídas em outros dias. */
@@ -41,7 +43,15 @@ function parseDateKey(dateKey: string) {
   return new Date(`${dateKey}T00:00:00Z`).getTime();
 }
 
+/**
+ * Dia em que a tarefa passa a contar. `null` só para tarefa sem data e sem
+ * início: ela não pertence a nenhum dia.
+ */
 export function getTaskScheduleStart(task: Task) {
+  if (task.dueDate === null) {
+    return task.startDate;
+  }
+
   if (task.startDate && task.startDate <= task.dueDate) {
     return task.startDate;
   }
@@ -49,8 +59,19 @@ export function getTaskScheduleStart(task: Task) {
   return task.dueDate;
 }
 
+export function isTaskOverdue(task: Task, todayDate: string) {
+  return task.dueDate !== null && task.dueDate < todayDate;
+}
+
 export function getTaskDurationDays(task: Task) {
-  const start = parseDateKey(getTaskScheduleStart(task));
+  const startKey = getTaskScheduleStart(task);
+
+  // Sem prazo não há intervalo para dividir a estimativa.
+  if (startKey === null || task.dueDate === null) {
+    return 1;
+  }
+
+  const start = parseDateKey(startKey);
   const due = parseDateKey(task.dueDate);
 
   return Math.max(1, Math.round((due - start) / MILLISECONDS_PER_DAY) + 1);
@@ -105,26 +126,28 @@ export function groupTasksForToday(
       task.status as (typeof OPEN_TASK_STATUSES)[number],
     ),
   );
-  const isOverdue = (task: Task) => task.dueDate < todayDate;
-  const isScheduledForToday = (task: Task) =>
-    isOverdue(task) ||
-    (getTaskScheduleStart(task) <= todayDate && task.dueDate >= todayDate);
+  const isOverdue = (task: Task) => isTaskOverdue(task, todayDate);
+  const byDueDate = (l: Task, r: Task) =>
+    (l.dueDate ?? "9999").localeCompare(r.dueDate ?? "9999");
+  // Sem prazo + início marcado = trazida para um dia; fica até concluir.
+  const isScheduledForToday = (task: Task) => {
+    const start = getTaskScheduleStart(task);
+
+    return (
+      isOverdue(task) ||
+      (start !== null &&
+        start <= todayDate &&
+        (task.dueDate === null || task.dueDate >= todayDate))
+    );
+  };
 
   return {
     inProgress: openTasks
       .filter((task) => task.status === "in_progress")
-      .sort((a, b) =>
-        compareByScore(a, b, todayDate, (l, r) =>
-          l.dueDate.localeCompare(r.dueDate),
-        ),
-      ),
+      .sort((a, b) => compareByScore(a, b, todayDate, byDueDate)),
     overdue: openTasks
       .filter(isOverdue)
-      .sort((a, b) =>
-        compareByScore(a, b, todayDate, (l, r) =>
-          l.dueDate.localeCompare(r.dueDate),
-        ),
-      ),
+      .sort((a, b) => compareByScore(a, b, todayDate, byDueDate)),
     today: openTasks
       .filter(isScheduledForToday)
       .sort((a, b) =>
@@ -133,12 +156,11 @@ export function groupTasksForToday(
         ),
       ),
     upcoming: openTasks
-      .filter((task) => getTaskScheduleStart(task) > todayDate)
-      .sort((a, b) =>
-        compareByScore(a, b, todayDate, (l, r) =>
-          l.dueDate.localeCompare(r.dueDate),
-        ),
-      ),
+      .filter((task) => (getTaskScheduleStart(task) ?? "") > todayDate)
+      .sort((a, b) => compareByScore(a, b, todayDate, byDueDate)),
+    someday: openTasks
+      .filter((task) => getTaskScheduleStart(task) === null)
+      .sort((left, right) => left.createdAt.localeCompare(right.createdAt)),
     completedToday: tasks
       .filter((task) => getTaskCompletedDateKey(task) === todayDate)
       .sort((left, right) =>
@@ -174,7 +196,8 @@ export function isDayComplete(
   if (
     !completed ||
     getTaskCompletedDateKey(completed) !== todayDate ||
-    getTaskScheduleStart(completed) > todayDate
+    // Sem data e sem início não é de dia nenhum, então não fecha o dia.
+    (getTaskScheduleStart(completed) ?? "9999") > todayDate
   ) {
     return false;
   }

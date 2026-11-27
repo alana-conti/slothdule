@@ -10,7 +10,7 @@ export type TaskEditableField = "due" | "estimate";
 
 type TaskFieldEditorProps = {
     disabled: boolean;
-    dueDate: string;
+    dueDate: string | null;
     dueTime: string | null;
     estimatedMinutes: number | null;
     field: TaskEditableField;
@@ -107,7 +107,7 @@ export function TaskFieldEditor({
                         Prazo
                         <input
                             className={inputClasses}
-                            defaultValue={dueDate}
+                            defaultValue={dueDate ?? ""}
                             name="dueDate"
                             required
                             type="date"
@@ -129,6 +129,18 @@ export function TaskFieldEditor({
                     >
                         Salvar
                     </button>
+                    {dueDate ? (
+                        <button
+                            className={cancelClasses}
+                            disabled={disabled}
+                            onClick={() =>
+                                onSave({ dueDate: null, dueTime: null })
+                            }
+                            type="button"
+                        >
+                            Sem pressa
+                        </button>
+                    ) : null}
                     <button
                         className={cancelClasses}
                         onClick={onCancel}

@@ -552,8 +552,10 @@ export function TaskRow({
                             onClick={() => toggleField("due")}
                             type="button"
                         >
-                            Prazo {formatDate(fields.dueDate)}
-                            {fields.dueTime
+                            {fields.dueDate
+                                ? `Prazo ${formatDate(fields.dueDate)}`
+                                : "Sem pressa"}
+                            {fields.dueDate && fields.dueTime
                                 ? ` às ${fields.dueTime.slice(0, 5)}`
                                 : ""}
                         </button>

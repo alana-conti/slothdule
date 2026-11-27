@@ -69,8 +69,9 @@ O aviso segue a identidade do app: cartão creme com borda de folha, mascote com
 
 - título;
 - categoria;
-- prioridade;
-- prazo.
+- prioridade.
+
+O prazo é opcional: deixar em branco guarda a tarefa em **Sem pressa** (ver fluxo "Sem pressa").
 
 ### Campos recomendados
 
@@ -90,6 +91,7 @@ Digita: “Revisar proposta da POC da empresa X até sexta”
 Sistema interpreta por regras
 ↓
 Sistema sugere título, categoria, prazo, prioridade e checklist
+(“algum dia”, “sem pressa” ou “sem data” deixam o prazo em branco)
 ↓
 Usuário revisa
 ↓
@@ -358,3 +360,22 @@ Ao fim da pausa: o próximo foco fica pronto, esperando a pessoa voltar
   - **Preferências:** a aba escolhida e o volume ficam no aparelho. O que está tocando vale só para a aba do navegador: recarregar para o som, porque o navegador exige um clique para voltar a tocar.
 - **Spotify:** fora por enquanto. Desde fevereiro de 2026 um app do Spotify em modo de desenvolvimento aceita só 5 usuários, e a cota maior é para empresas grandes. O caminho viável é o link da playlist no perfil (embed no desktop, "Abrir no Spotify" no celular).
 - **Próximas fases:** histórico de foco (tempo real gasto ao lado da estimativa da tarefa), aviso por Web Push com a tela bloqueada e o link da playlist do Spotify no perfil.
+
+## 13. Fluxo: Sem pressa (tarefas sem data)
+
+```text
+Usuário cria uma tarefa e deixa o prazo em branco
+↓
+A tarefa vai para "Sem pressa" (menu Seu dia; no celular, em Mais)
+↓
+Ela não aparece em Hoje, na Linha do tempo nem no Calendário, e nunca fica atrasada
+↓
+Quando chegar a hora, o usuário dá uma data pelo selo "Sem pressa" na linha
+```
+
+- **Nome:** "Sem pressa", não "backlog". É o lugar do que vai acontecer um dia, sem cobrança. Rota `/later`.
+- **Dado:** `due_date` vazio. Sem data e sem data de início = Sem pressa (`someday` em `groupTasksForToday`). Com data de início e sem prazo, a tarefa entra em Hoje a partir desse dia e fica até ser concluída, sem nunca virar "Ficou de antes".
+- **Ida e volta:** o selo de prazo da linha mostra "Sem pressa". No editor de prazo, o botão **Sem pressa** tira a data de uma tarefa que já tinha.
+- **Ordem:** da mais antiga para a mais nova.
+- **Folhinhas:** sem prazo não há bônus de "antes do prazo"; o ganho por prioridade continua igual.
+- **Próxima fase:** sugerir, em dias leves, adiantar uma tarefa futura ou de Sem pressa ("Trazer pra hoje", "Só 25 min", "Agora não"), sempre com o motivo à vista.

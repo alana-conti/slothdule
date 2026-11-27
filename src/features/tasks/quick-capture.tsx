@@ -100,7 +100,9 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
 
     // 1. Due Date
     let parsedDate = getLocalDateString(new Date()); // default: hoje
-    if (/\bhoje\b/i.test(lower)) {
+    if (/\b(algum dia|sem pressa|sem data)\b/i.test(lower)) {
+      parsedDate = ""; // vai para "Sem pressa"
+    } else if (/\bhoje\b/i.test(lower)) {
       parsedDate = getLocalDateString(new Date());
     } else if (/\b(amanhã|amanha)\b/i.test(lower)) {
       const tomorrow = new Date();
@@ -136,7 +138,7 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
 
     // 4. Title clean up
     let cleaned = val.replace(
-      /\b(hoje|amanhã|amanha|sexta|urgente|crítico|critico)\b/gi,
+      /\b(algum dia|sem pressa|sem data|hoje|amanhã|amanha|sexta|urgente|crítico|critico)\b/gi,
       ""
     );
     cleaned = cleaned.replace(
@@ -156,7 +158,7 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
         ⚡ Captura Rápida
       </h3>
       <p className="text-xs text-sloth-muted mb-4">
-        Digite o que fazer. Use termos como: <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">hoje</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">amanhã</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">sexta</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">urgente</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">crítico</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">reunião</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">financeiro</code>...
+        Digite o que fazer. Use termos como: <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">hoje</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">amanhã</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">sexta</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">algum dia</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">urgente</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">crítico</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">reunião</code>, <code className="bg-sloth-beige/40 px-1 py-0.5 rounded text-sloth-forest font-semibold">financeiro</code>...
       </p>
 
       <div className="space-y-4">
@@ -276,10 +278,20 @@ export function QuickCapture({ categories, onSubmit }: QuickCaptureProps) {
                   id="suggested-date"
                   name="dueDate"
                   onChange={(e) => setDueDate(e.target.value)}
-                  required
                   type="date"
                   value={dueDate}
                 />
+                {dueDate ? (
+                  <button
+                    className="mt-1 cursor-pointer text-xs text-sloth-forest underline-offset-2 hover:underline"
+                    onClick={() => setDueDate("")}
+                    type="button"
+                  >
+                    Sem pressa, sem data
+                  </button>
+                ) : (
+                  <p className="mt-1 text-xs text-sloth-muted">Fica em Sem pressa.</p>
+                )}
               </div>
 
               <div className="flex items-end">

@@ -208,6 +208,7 @@ export function CalendarView({ tasks }: CalendarViewProps) {
                   const isOverdue =
                     task.status !== "done" &&
                     task.status !== "archived" &&
+                    task.dueDate !== null &&
                     task.dueDate < todayStr;
 
                   // Estilos dos cartões dependendo do estado

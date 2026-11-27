@@ -80,6 +80,15 @@ const icons = {
             <path d="M12 5v14M5 12h14" />
         </Icon>
     ),
+    // Um galho com algo pendurado: guardado para depois, sem pressa.
+    branch: (
+        <Icon>
+            <path d="M3 6c6 1.5 12 1.5 18-1" />
+            <path d="M16.5 6.2c.3 1.8 1.5 2.8 3.2 2.8" />
+            <path d="M9 7v4" />
+            <circle cx="9" cy="14" r="3" />
+        </Icon>
+    ),
     sprout: (
         <Icon>
             <path d="M12 20v-7" />
@@ -114,6 +123,12 @@ const today: NavItem = {
     href: "/today",
     icon: icons.sun,
     label: "Hoje",
+};
+const later: NavItem = {
+    activeFor: ["/later"],
+    href: "/later",
+    icon: icons.branch,
+    label: "Sem pressa",
 };
 const timeline: NavItem = {
     activeFor: ["/timeline"],
@@ -152,7 +167,7 @@ const rewards: NavItem = {
 
 // Novas telas entram em um grupo: o menu cresce sem mudar de layout.
 const groups: NavGroup[] = [
-    { items: [today, timeline, calendar], label: "Seu dia" },
+    { items: [today, later, timeline, calendar], label: "Seu dia" },
     { items: [routineOverview, routineGarden], label: "Rotina" },
     { items: [rewards], label: "Cantinho" },
 ];
@@ -380,7 +395,7 @@ function MobileBar({
     // A folha fecha sozinha ao trocar de tela, sem efeito para isso.
     const moreOpen = openFor === pathname;
     const moreItems = [routineOverview, routineGarden];
-    const moreActive = [...moreItems, rewards].some((item) => isActive(item, pathname));
+    const moreActive = [...moreItems, later, rewards].some((item) => isActive(item, pathname));
 
     useEffect(() => {
         if (!moreOpen) {
@@ -444,6 +459,16 @@ function MobileBar({
                         );
                     })}
                     <div className="mx-2 my-2 border-t border-sloth-border/70" />
+                    <Link
+                        aria-current={isActive(later, pathname) ? "page" : undefined}
+                        className={itemClass(isActive(later, pathname))}
+                        href={later.href}
+                    >
+                        <span className={isActive(later, pathname) ? "text-sloth-moss" : "text-sloth-muted"}>
+                            {later.icon}
+                        </span>
+                        {later.label}
+                    </Link>
                     <button
                         className={`${itemClass(false)} w-full cursor-pointer text-left`}
                         onClick={() => {

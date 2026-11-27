@@ -108,8 +108,8 @@ export default async function TaskDetailPage({
             <div>
               <dt className="text-sloth-muted">Prazo</dt>
               <dd className="mt-1 font-semibold text-sloth-ink">
-                {formatDate(task.dueDate)}
-                {task.dueTime ? ` às ${task.dueTime.slice(0, 5)}` : ""}
+                {task.dueDate ? formatDate(task.dueDate) : "Sem pressa"}
+                {task.dueDate && task.dueTime ? ` às ${task.dueTime.slice(0, 5)}` : ""}
               </dd>
             </div>
           </dl>

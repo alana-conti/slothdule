@@ -100,7 +100,10 @@ export function TimelineView({ habits = [], tasks, categories, clients, projects
   // 1. Group tasks
   const groupedTasks: Record<string, { name: string; color?: string | null; tasks: Task[] }> = {};
 
+  // Sem data não tem lugar na linha do tempo: fica em "Sem pressa".
   tasks.forEach((task) => {
+    if (task.dueDate === null) return;
+
     let groupKey = "";
     let groupName = "";
     let groupColor: string | null | undefined = null;
@@ -284,6 +287,7 @@ export function TimelineView({ habits = [], tasks, categories, clients, projects
 
                 {/* Task Rows */}
                 {group.tasks.map((task) => {
+                  if (task.dueDate === null) return null;
                   const tStart = parseDate(task.startDate || task.dueDate);
                   const tEnd = parseDate(task.dueDate);
                   

@@ -300,3 +300,80 @@ describe("isDayComplete", () => {
     expect(isDayComplete(tasks, "sumiu", today)).toBe(false);
   });
 });
+
+describe("tarefas sem data (Sem pressa)", () => {
+  const today = "2026-06-12";
+
+  it("ficam em someday, fora de hoje, das próximas e das atrasadas", () => {
+    const task = createTask({ dueDate: null });
+    const groups = groupTasksForToday([task], today);
+
+    expect(groups.someday).toEqual([task]);
+    expect(groups.today).toEqual([]);
+    expect(groups.upcoming).toEqual([]);
+    expect(groups.overdue).toEqual([]);
+  });
+
+  it("entram em hoje quando ganham início, e nunca ficam atrasadas", () => {
+    const task = createTask({ dueDate: null, startDate: "2026-06-01" });
+    const groups = groupTasksForToday([task], today);
+
+    expect(groups.today).toEqual([task]);
+    expect(groups.overdue).toEqual([]);
+    expect(groups.someday).toEqual([]);
+  });
+
+  it("com início futuro, aparecem nas próximas", () => {
+    const task = createTask({ dueDate: null, startDate: "2026-06-20" });
+
+    expect(groupTasksForToday([task], today).upcoming).toEqual([task]);
+  });
+
+  it("em andamento continuam em foco", () => {
+    const task = createTask({ dueDate: null, status: "in_progress" });
+
+    expect(groupTasksForToday([task], today).inProgress).toEqual([task]);
+  });
+
+  it("ordenam pela mais antiga e vão para o fim quando misturadas por prazo", () => {
+    const old = createTask({
+      id: "old",
+      dueDate: null,
+      createdAt: "2026-05-01T12:00:00Z",
+    });
+    const recent = createTask({ id: "recent", dueDate: null });
+    const dated = createTask({ id: "dated", status: "in_progress" });
+    const groups = groupTasksForToday(
+      [recent, old, { ...old, id: "foco", status: "in_progress" }, dated],
+      today,
+    );
+
+    // Em andamento também segue listada em Sem pressa.
+    expect(groups.someday.map((task) => task.id)).toEqual([
+      "old",
+      "foco",
+      "recent",
+    ]);
+    expect(groups.inProgress.map((task) => task.id)).toEqual(["dated", "foco"]);
+  });
+
+  it("contam a estimativa inteira em um dia", () => {
+    const task = createTask({ dueDate: null, estimatedMinutes: 90 });
+
+    expect(getTaskDurationDays(task)).toBe(1);
+    expect(getTaskDailyEstimatedMinutes(task)).toBe(90);
+  });
+
+  it("concluir uma delas não fecha o dia", () => {
+    const tasks = [
+      createTask({
+        id: "a",
+        dueDate: null,
+        completedAt: "2026-06-12T18:00:00Z",
+        status: "done",
+      }),
+    ];
+
+    expect(isDayComplete(tasks, "a", today)).toBe(false);
+  });
+});
