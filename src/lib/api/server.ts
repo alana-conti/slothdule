@@ -72,14 +72,30 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
   const { backendUrl } = getApiConfig();
   const cookieHeader = await forwardCookieHeader();
 
-  const response = await fetch(`${backendUrl}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init.headers as Record<string, string> | undefined),
-      ...(cookieHeader ? { Cookie: cookieHeader } : {}),
-    },
-  });
+  const send = () =>
+    fetch(`${backendUrl}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init.headers as Record<string, string> | undefined),
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+      },
+    });
+
+  let response: Response;
+
+  try {
+    response = await send();
+  } catch (error) {
+    // Falha de rede antes de qualquer resposta. Leitura é segura de repetir
+    // uma vez; escrita não, para não duplicar nada.
+    if ((init.method ?? "GET").toUpperCase() !== "GET") {
+      throw error;
+    }
+
+    console.error(`[api] GET ${path} falhou na rede; tentando de novo.`, error);
+    response = await send();
+  }
 
   await propagateCookies(response);
 
